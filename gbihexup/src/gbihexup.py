@@ -15,20 +15,16 @@ Description:
     image file name. All other command line parameters are switches which
     may or may not require additional parameters.
 '''
-from com.gnubio.gbihexup.hostaction import HostAction
+
 
 '''
-    --- System Imports Section --
+    Import modules 
 '''
 import argparse
 
-'''
-    --- Local Imports Section ---
-'''
+
 from com.gnubio.gbihexup.errorcodes import ERROR_CODE
-
-import com.gnubio.gbihexup.hostaction
-
+from com.gnubio.gbihexup.hostaction import HostAction
 
 
 
@@ -40,10 +36,15 @@ import com.gnubio.gbihexup.hostaction
 if __name__ == "__main__":
 
     '''
-        
+        Setup some default values
     '''
     exitCode = ERROR_CODE.SUCCESS
+    currentSerialPort = "/dev/ttyACM0"
+    currentBuadRate = 9600
     
+    '''
+        Instantiate the HostAction class
+    '''
     hostAction = HostAction()
     
     
@@ -62,10 +63,6 @@ if __name__ == "__main__":
         exit (exitCode)
         
         
-        
-   
-    
-
 
         
     exit(exitCode)
