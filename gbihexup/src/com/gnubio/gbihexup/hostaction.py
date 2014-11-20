@@ -119,17 +119,25 @@ class HostAction(object):
         return rValue
     
     def send_image_line(self, line):
+        """
+           Write a firmware image file line to the serial port.
+           Do a basic format test and make sure the line isn't
+           zero length. 
+        """
         rValue = False
         
         try:
             self.serialPort.timeout = 5
             
-            self.serialPort.write(line)
-            self.serialPort.flush()
-            response = self.serialPort.readline()
-            
-            if "OK" in response:
-                rValue = True
+            if line.startswith(":"):
+                self.serialPort.write(line)
+                self.serialPort.flush()
+                response = self.serialPort.readline()
+                
+                if "OK" in response:
+                    rValue = True
+            else:
+                rValue = False
             
         except Exception as ex:
             rValue = ERROR_CODE.INVALID_PARAMETER

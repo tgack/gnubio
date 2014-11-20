@@ -150,7 +150,9 @@ if __name__ == "__main__":
                 lineCount = lineCount + 1
                 print_extra_output(verboseOutput, "Line {0}: {1}".format(lineCount, each_line.strip(' \t\n\r')))
                 
-                result = hostAction.send_image_line(each_line)
+                # ignore any zero length lines.
+                if len(each_line.strip(' \t\n\r')) > 0:
+                    result = hostAction.send_image_line(each_line)
                 
                 if False == result:
                     exitCode = ERROR_CODE.INVALID_PARAMETER
