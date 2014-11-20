@@ -5,5 +5,26 @@ Repository for gnubio source code and project files.
 
 Sub-projects
 
-1. gpihexup - Python CLI for uploading firmware images.
-2. .gitignore - List of files and directories that git will ignore
+gpihexup - Python CLI for uploading firmware images.
+
+    usage: gbihexup.py [-h] [-s] [-p PORT] [-b BAUD] [-f FILE] [-t TARGET] [-v]
+    
+    gnubio Arduino / Atmel firmware upload utility
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -s, --scan            print a list of available serial ports
+      -p PORT, --port PORT  serial port name
+      -b BAUD, --baud BAUD  serial port communication speed
+      -f FILE, --file FILE  firmware image file name
+      -t TARGET, --target TARGET
+                            target address
+      -v, --verbose         print extra information
+
+    
+    Example:
+        gbihexup --baud=115200 --port=/dev/ttyACM0 --file=fw_image.hex --target=1 -v
+    
+        Updates device at i2c address1 using the fw_image.hex file (in the cwd).
+        Serial port /dev/ttyACM0 is opend at 115200 bps and extra debugging information
+        is printed. 
