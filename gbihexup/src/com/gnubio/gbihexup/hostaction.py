@@ -16,14 +16,15 @@ import glob
 import serial
 
 from errorcodes import ERROR_CODE
-from stk500 import STK500
 
 
 
-class HostAction(STK500):
+
+class HostAction(object):
     
     def __init__(self):
         self.serialPort = serial.Serial()
+        self.lastExceptionMessage = ""
     
     def serial_port_list(self):
         """
@@ -68,29 +69,75 @@ class HostAction(STK500):
     
         return(result)
     
-    def open_serial(self, port, baud):
+    def open_serial(self, port='/dev/ttyACM0', baud=115200):
+        """
+            Open the serial port and get it ready for communication
+            
+        """
         
-        self.serialPort.port = port
-        self.serialPort.baudrate = baud
-        self.serialPort.bytesize = 8
-        self.serialPort.stopbits = 1
+        rValue = ERROR_CODE.UNKNOWN
+        try:
+                
+            self.serialPort = serial.Serial(port, baud, timeout=1)
+            
+            self.serialPort.write("\r")
+            self.serialPort.flush()
+            temp = self.serialPort.readlines()
+                        
+            rValue = ERROR_CODE.SUCCESS
+            
+        except Exception as msg:
+            rValue = ERROR_CODE.SERIAL_PORT_OPEN_ERR
+            self.lastExceptionMessage = msg
+            
+            
+        return (rValue)
         
-        self.serialPort.open()
-
-    def cmd_sign_on(self):
+        
+        
+    def set_target_address(self, target):
+        """
+            Set the target address for firmware update
+        """
+        
         rValue = False
-        # if the serial port is open then continue
-        if self.serialPort.isOpen():
+        
+        try:
+            self.serialPort.timeout = 1
+            self.serialPort.write("%{0}\r".format(target))
+            self.serialPort.flush()
+            response = self.serialPort.readline()
             
-            data = self.build_cmd_sign_on()
+            if "OK" in response:
+                rValue = True 
             
-            if True == self.build_request_packet(data):
-                self.serialPort.write(data)
-                
+        except Exception as ex:
+            rValue = ERROR_CODE.INVALID_PARAMETER
+            self.lastExceptionMessage = ex
+            rValue = False
             
-                
         return rValue
+    
+    def send_image_line(self, line):
+        rValue = False
+        
+        try:
+            self.serialPort.timeout = 5
             
+            self.serialPort.write(line)
+            self.serialPort.flush()
+            response = self.serialPort.readline()
+            
+            if "OK" in response:
+                rValue = True
+            
+        except Exception as ex:
+            rValue = ERROR_CODE.INVALID_PARAMETER
+            self.lastExceptionMessage = ex
+            rValue = False
+        
+        
+        return rValue
 
 if __name__ == "__main__":
     
