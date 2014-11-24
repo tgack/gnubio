@@ -5,6 +5,7 @@ Created on Nov 13, 2014
 '''
 
 class ERROR_CODE(object):
+    
     SUCCESS = 0
     UNKNOWN = 1
     INVALID_PARAMETER = 2

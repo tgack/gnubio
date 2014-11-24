@@ -17,9 +17,6 @@ import serial
 
 from errorcodes import ERROR_CODE
 
-
-
-
 class HostAction(object):
     
     def __init__(self):
@@ -27,6 +24,7 @@ class HostAction(object):
         self.lastExceptionMessage = ""
     
     def serial_port_list(self):
+        
         """
             List all available serial ports available on this host
             
@@ -70,12 +68,13 @@ class HostAction(object):
         return(result)
     
     def open_serial(self, port='/dev/ttyACM0', baud=115200):
+        
         """
             Open the serial port and get it ready for communication
-            
         """
         
         rValue = ERROR_CODE.UNKNOWN
+        
         try:
                 
             self.serialPort = serial.Serial(port, baud, timeout=1)
@@ -87,6 +86,7 @@ class HostAction(object):
             rValue = ERROR_CODE.SUCCESS
             
         except Exception as msg:
+            
             rValue = ERROR_CODE.SERIAL_PORT_OPEN_ERR
             self.lastExceptionMessage = msg
             
@@ -119,6 +119,7 @@ class HostAction(object):
         return rValue
     
     def send_image_line(self, line):
+        
         """
            Write a firmware image file line to the serial port.
            Do a basic format test and make sure the line isn't
@@ -127,6 +128,7 @@ class HostAction(object):
         rValue = False
         
         try:
+            
             self.serialPort.timeout = 5
             
             if line.startswith(":"):

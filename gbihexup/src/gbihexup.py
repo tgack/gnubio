@@ -36,11 +36,10 @@ Created on Nov 13, 2014
         gbihexup --baud=115200 --port=/dev/ttyACM0 --file=fw_image.hex --target=1 -v
     
         Updates device at i2c address1 using the fw_image.hex file (in the cwd).
-        Serial port /dev/ttyACM0 is opend at 115200 bps and extra debugging information
+        Serial port /dev/ttyACM0 is opened at 115200 bps and extra debugging information
         is printed. 
     
 '''
-
 
 #
 #    Import modules 
@@ -53,6 +52,7 @@ from com.gnubio.gbihexup.hostaction import HostAction
 
 
 def build_cli_arguments():
+    
     '''
         Create and initialize the command each_line parser
     '''     
@@ -68,6 +68,7 @@ def build_cli_arguments():
 
 
 def print_extra_output(verbose, out_string):
+    
     """
          Extra output print helper
     """
@@ -125,6 +126,7 @@ if __name__ == "__main__":
     #
     #
     if ERROR_CODE.SUCCESS == hostAction.open_serial(currentSerialPort, currentBaudRate):
+        
         content = []
         
         print("Serial port {0} opened at {1} baud.".format(currentSerialPort, currentBaudRate))
@@ -158,9 +160,11 @@ if __name__ == "__main__":
                     exitCode = ERROR_CODE.INVALID_PARAMETER
                     break;
         else:
+            
             print("Unable to set target address")
             exitCode = ERROR_CODE.COMM_ERROR
     else:
+        
         exitCode = ERROR_CODE.SERIAL_PORT_OPEN_ERR
         # print("could not open serial port %s: %s" % currentSerialPort, hostAction.lastExceptionMessage)
         print("could not open serial port: {0}".format(hostAction.lastExceptionMessage))
