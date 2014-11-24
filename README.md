@@ -35,7 +35,7 @@ Sub-projects
 		Serial port /dev/ttyACM0 is opend at 115200 bps and extra debugging information
 		is printed. 
 
-AVR Toochain:
+AVR Toochain
 	Atmel AVR 8-bit Toolchain 3.4.5 - Linux 64-bit
 	avrdude: Version 6.1, compiled from source on 11-24-2014
 	JTAG: AVR JTAGICE3 (03eb:2140)
