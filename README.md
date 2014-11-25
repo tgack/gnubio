@@ -28,17 +28,33 @@ Sub-projects
 	      -v, --verbose         print extra information
 
 	    
-	    Example:
-		gbihexup --baud=115200 --port=/dev/ttyACM0 --file=fw_image.hex --target=1 -v
-	    
-		Updates device at i2c address1 using the fw_image.hex file (in the cwd).
-		Serial port /dev/ttyACM0 is opend at 115200 bps and extra debugging information
-		is printed. 
+        Example:
+                gbihexup --baud=115200 --port=/dev/ttyACM0 --file=fw_image.hex --target=1 -v
+                
+                Updates device at i2c address1 using the fw_image.hex file (in the cwd).
+                Serial port /dev/ttyACM0 is opend at 115200 bps and extra debugging information
+                is printed. 
 
 AVR Toochain
-	Atmel AVR 8-bit Toolchain 3.4.5 - Linux 64-bit
-	avrdude: Version 6.1, compiled from source on 11-24-2014
-	JTAG: AVR JTAGICE3 (03eb:2140)
+
+        Atmel AVR 8-bit Toolchain 3.4.5 - Linux 64-bit
+        avrdude: Version 6.1, compiled from source on 11-24-2014
+        JTAG: AVR JTAGICE3 (03eb:2140)
 	
-	Host OS: Ubuntu 14.04 LTS (64-bit)
+        Host OS: Ubuntu 14.04 LTS (64-bit)
+	
+Leonardo JTAGICE3 Connections
+        JTAGICE3 Squib               Leonardo
+	-------------------------              -------------------------
+		1					A3
+		2					GND
+		3					A1
+		4					+5V
+		5 					A2
+		6					RESET
+		7					N/C
+		8					N/C
+		9					A0
+		10					GND
+		
 	
