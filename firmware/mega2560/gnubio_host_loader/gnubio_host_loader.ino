@@ -1,3 +1,4 @@
+
 /*
  * GNUBIO - Arduino Mega2560 Host Loader program
  *
@@ -19,6 +20,7 @@
  *  Sending line ends [\n] is acceptable, this character is simply ignored in all cases.
  *
  */
+#include <Wire.h>
 
 #define LINE_BUFFER_SIZE  256
 #define FLASHING_LED 13
