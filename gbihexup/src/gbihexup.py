@@ -45,6 +45,7 @@ Created on Nov 13, 2014
 #    Import modules 
 #
 import argparse
+#import time
 
 from com.gnubio.gbihexup.errorcodes import ERROR_CODE
 from com.gnubio.gbihexup.hostaction import HostAction
@@ -153,12 +154,17 @@ if __name__ == "__main__":
                 print_extra_output(verboseOutput, "Line {0}: {1}".format(lineCount, each_line.strip(' \t\n\r')))
                 
                 # ignore any zero length lines.
-                if len(each_line.strip(' \t\n\r')) > 0:
+                request = each_line.strip(' \t\n\r')
+                if len(request) > 0:
                     result = hostAction.send_image_line(each_line)
                 
                 if False == result:
                     exitCode = ERROR_CODE.INVALID_PARAMETER
                     break;
+                #else:
+                    # Give the Arduino a chance to catch up. The Mega2560 can't
+                    # keep up with a fast host.
+                #    time.sleep(0.02)
         else:
             
             print("Unable to set target address")

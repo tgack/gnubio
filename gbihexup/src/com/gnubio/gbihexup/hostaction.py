@@ -132,7 +132,7 @@ class HostAction(object):
             self.serialPort.timeout = 5
             
             if line.startswith(":"):
-                self.serialPort.write(line)
+                self.serialPort.write("{0}\r".format(line))
                 self.serialPort.flush()
                 response = self.serialPort.readline()
                 

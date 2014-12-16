@@ -9,5 +9,13 @@
 /gbihexup/src/com/gnubio/gbihexup/errorcodes.pyc
 /gbihexup/src/com/gnubio/gbihexup/hostaction.pyc
 /gbihexup/src/fw_image.hex
+/bootloaders/atmega32u4_twi/obj/*.d
+/bootloaders/atmega32u4_twi/obj/*.o
+/bootloaders/atmega32u4_twi/obj/*.elf
+/bootloaders/atmega32u4_twi/obj/*.map
+/gbihexup/src/*.hex
+/firmware/mega2560/gnubio_host_loader/data
+
+
 
 
