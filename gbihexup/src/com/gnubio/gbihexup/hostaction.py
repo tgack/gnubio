@@ -142,7 +142,7 @@ class HostAction(object):
                 rValue = False
             
         except Exception as ex:
-            rValue = ERROR_CODE.INVALID_PARAMETER
+            #rValue = ERROR_CODE.INVALID_PARAMETER
             self.lastExceptionMessage = ex
             rValue = False
         

@@ -104,7 +104,7 @@ unsigned long	boot_timeout;
 unsigned long	boot_timer;
 unsigned int	boot_state;
 
-
+unsigned int flashAddressExtension;
 
 /*
  * Forward function definitions
@@ -125,6 +125,7 @@ unsigned char getIHexByteValue(String ihexLine, unsigned int linePosition, unsig
 unsigned char dataLength(String ihexLine);
 unsigned int recordAddress(String ihexLine);
 unsigned char recordType(String ihexLine);
+unsigned int getAddressExtension(String ihexLine);
 
 /*
  * Setup section.
@@ -245,7 +246,6 @@ boolean processRequest() {
       /* Recover the bytecount */
       byteCount = dataLength(lineBuffer);
 
-
       /* Recover the address */
       address = recordAddress(lineBuffer);
 
@@ -258,7 +258,9 @@ boolean processRequest() {
       }
 
       /* Only process data record types */
-      if(0 == type) {
+      switch(type)
+      {
+      case 0:      /* Data type */
         if(requestRecordWrite(targetAddress, address, dataBuffer, byteCount)) {
           /* Verify the record was written correctly. */
           rValue = requestRecordVerify(targetAddress, address, dataBuffer, byteCount);
@@ -266,11 +268,16 @@ boolean processRequest() {
         else {
           rValue = false;
         }
-      } 
-      else {
-        /* Ignore other record types */
+        break;
+      case 2:    /* Extended Setment Address */
+        flashAddressExtension = getAddressExtension(lineBuffer) >> 12;
         rValue = true;
+        break;
+      default:
+        rValue = true;
+        break;
       }
+      
     }
 
   }
@@ -285,6 +292,7 @@ boolean processRequest() {
     if( (targetAddress > 0) && (targetAddress < 128) ) {
       rValue = true;
       eraseTargetFlag = true;
+      flashAddressExtension = 0;
     }
     else  {
       rValue = false;
@@ -343,6 +351,26 @@ unsigned char dataLength(String ihexLine)
   return getIHexByteValue(ihexLine, 1, 0);
 }
 
+
+/*
+ * Function: getAddressExtension
+ * Input:
+ *    ihexLine - One record (assumes record type is 4)
+ * Output:
+ *    none
+ * Returns:
+ *    Extended Linear Address
+ */
+unsigned int getAddressExtension(String ihexLine)
+{
+  unsigned int rValue;
+  
+  rValue = getIHexByteValue(ihexLine, 9, 0) << 8;
+  rValue |= getIHexByteValue(ihexLine, 11, 0);
+  
+  return rValue;
+}
+
 /* 
  * Function: recordAddress
  * 
@@ -380,6 +408,9 @@ unsigned char recordType(String ihexLine)
 {
   return getIHexByteValue(ihexLine, 7, 0);
 }
+
+
+
 
 /* 
  * Function: serialEvent - 
@@ -487,7 +518,7 @@ boolean verifyLineChecksum()
   int bufferIndex;
   int dataLen;
   unsigned int temp;
-  int checksum;
+  unsigned int checksum;
 
 
   bufferIndex = 1;
@@ -557,7 +588,7 @@ boolean readSTK500V2Response(unsigned char device, unsigned char *buffer, unsign
   int index, i;
   unsigned char checkSum;
 
-
+  i = 0;
   /* Request bytes from target device */
   Wire.requestFrom(device, expectSize);
 
@@ -676,11 +707,12 @@ boolean requestRecordWrite(unsigned char deviceAddress, unsigned int flashAddres
 
     /* Start by issuing a load address command */
     request_buffer[0] = CMD_LOAD_ADDRESS;
-    request_buffer[1] = 0;
-    request_buffer[2] = 0;    
+    request_buffer[1] = (flashAddressExtension >> 8);
+    request_buffer[2] = (flashAddressExtension & 0x00FF);    
     request_buffer[3] = (flashAddress >> 8);    
-    request_buffer[4] = (flashAddress & 0xFF);    
-
+    request_buffer[4] = (flashAddress & 0xFF); 
+ 
+ 
     /* Make the Load Address request */
     if(true == writeSTK500V2Command(deviceAddress, request_buffer, LOAD_ADDRESS_CMD_SIZE)) {
       if(true == readSTK500V2Response(deviceAddress, response_buffer,LOAD_ADDRESS_RESP_SIZE)) {
@@ -775,10 +807,10 @@ boolean requestRecordVerify(unsigned char deviceAddress, unsigned int flashAddre
   if(deviceAddress > 0 && deviceAddress < 128) {
     /* Start by issuing a load address command */
     request_buffer[0] = CMD_LOAD_ADDRESS;
-    request_buffer[1] = 0;
-    request_buffer[2] = 0;    
+    request_buffer[1] = (flashAddressExtension >> 8);
+    request_buffer[2] = (flashAddressExtension & 0x00FF);    
     request_buffer[3] = (flashAddress >> 8);    
-    request_buffer[4] = (flashAddress & 0xFF);    
+    request_buffer[4] = (flashAddress & 0x00FF);    
 
     /* Make the Load Address request */
     if(true == writeSTK500V2Command(deviceAddress, request_buffer, LOAD_ADDRESS_CMD_SIZE)) {
