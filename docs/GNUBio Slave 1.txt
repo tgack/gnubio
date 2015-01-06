@@ -10,7 +10,9 @@ Target Processor:
 Bootloader Firmware Image Name:
 	twi_atmega2560_S2.hex
 
-
+Bootloader Flash Address Space (word address):
+	0x1F000 - 0x1FFFF
+	
 Fuse Settings:
 	BODLEVEL: 4V3
 	OCDEN: Un-programmed
