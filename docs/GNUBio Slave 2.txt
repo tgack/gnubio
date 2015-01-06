@@ -7,6 +7,9 @@ Toolchain:
 Target Processor:
 	ATMEGA2560
 
+Bootloader Flash Address Space (word address):
+	0x1F000 - 0x1FFFF
+
 Bootloader Firmware Image Name:
 	twi_atmega2560_S3.hex
 
