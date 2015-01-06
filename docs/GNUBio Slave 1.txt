@@ -1,0 +1,45 @@
+GNUBio Slave 2 Bootloader programming
+
+Bootloader Firmware Image Name:
+	twi_atmega2560_S2.hex
+
+Fuse Settings:
+	BODLEVEL: 4V3
+	OCDEN: Un-programmed
+	JTAGEN: Un-programmed
+	SPIEN: Programmed
+	WDTON: Un-programmed
+	EESAVE: Un-programmed
+	BOOTSZ: 4096W_1F00
+	BOOTRST: Programmed
+	CKDIV8: Un-programmed
+	CDOUT: Un-programmed
+	SUT_CKSEL: EXTOSC_8MHZ_XX_16KCK_65MS
+
+Fuse Registers:
+	Extended: 0xFC
+	High: 0xD8
+	Low: 0xFF
+	
+Lock Bits:
+	LB: NO_LOCK
+	BLB0: NO_LOCK
+	BLB1: NO_LOCK
+
+	
+Enable the bootloader:
+	1. Erase the contents of EEPROM address 4095. (value = 0xFF)
+	2. Reset the micro-controller.
+	3. The slave micro-controller is now waiting for a program to be uploaded using TWI communication.
+	
+Uploading a new application using the boot loader:
+	Pre-requisite: The host micro-controller depends on the Arduino boot loader: 
+		arduino/hardware/arduino/bootloaders/stk500v2/stk500boot_v2_mega2560.hex
+		The host micro-controller must be programmed prior to using these GNUBio TWI bootloaders.
+	1. Enable the boot loader
+	2. Load a host firmware loader on the GBUBio master micr-controller
+		a. An example of an Arduino host program is provided: gnubio_host_loader.ino
+		b. An intel hex image of the host program is provided: gnubio_host_loader.cpp.hex
+		c. An example script file that utilizes avrdude, a serial port, and the intel hex file image is provided: load_host_firmware.sh
+	3. Upload the firmware image (intel hex file format) using the gbihexup utility
+		Ex. python gbihexup --baud=115200 --port=/dev/ttyUSB0 --file=twi_atmega2560_S2.hex --target=2 -v
