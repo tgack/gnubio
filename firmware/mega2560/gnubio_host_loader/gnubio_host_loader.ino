@@ -82,7 +82,13 @@
 
 
 #define LINE_BUFFER_SIZE  256
-#define FLASHING_LED 13
+// #define FLASHING_LED 13
+#define FLASHING_LED 0x01
+#define COMM_LED  0x02
+#define LED_PORT PORTG
+#define LED_PIN  PING
+#define LED_DDR  DDRG
+
 #define IIC_BUFFER_SIZE 64
 
 #define IIC_SUCCESS 0
@@ -133,13 +139,25 @@ unsigned int getAddressExtension(String ihexLine);
  */
 void setup() {
 
-  pinMode(FLASHING_LED, OUTPUT);
+//  pinMode(FLASHING_LED, OUTPUT);
+  /* Set PORTG.0 and PORTG.1 direction to output */
+  LED_DDR |= (FLASHING_LED | COMM_LED);
+  
+  /* Set PORTA.1,2,3 direction to output. These are the slave reset lines */
+  DDRA |= 0x0E;
+  PORTA = 0x0E;    // Force the processor into reset
+  /* Delay 100mS */
+  delay(100);
+  /* Release the slave processors from reset */
+  PORTA = 0x00;
+  
 
   /* Start the local serial port. */
   Serial.begin(115200);
-
+  
   /* Start the I2C system in master mode. */
   Wire.begin();
+  
 
   /* Initialize global variables. */
   streamEvent = false;
@@ -159,6 +177,8 @@ void setup() {
  */
 void loop() {
 
+  unsigned char ledShadow;
+  
   flashLED();
 
   /* Read characters in from the serial port. */
@@ -170,7 +190,10 @@ void loop() {
   /* Monitor incomming requests */
   if(streamEvent) {
 
-
+    ledShadow = LED_PIN;
+    ledShadow |= COMM_LED;
+    LED_PORT = ledShadow;
+    
     if(processRequest()) {
       sendOKResponse();
       ledFlashPeriod = 250;
@@ -182,6 +205,11 @@ void loop() {
 
     streamEvent = false;
     lineBuffer = "";    
+    
+    ledShadow = LED_PIN;
+    ledShadow &= ~COMM_LED;
+    LED_PORT = ledShadow;
+    
   }
 
 
@@ -550,7 +578,7 @@ boolean verifyLineChecksum()
 
 void flashLED() {
   unsigned long currentTickCount;
-
+  unsigned char out;
   currentTickCount = millis();
 
   /*
@@ -561,7 +589,19 @@ void flashLED() {
 
     ledState = 1 - ledState;
 
-    digitalWrite(FLASHING_LED, ledState);
+    
+    /* Read the port pin into a shadow register. */
+    out = LED_PIN;       
+    
+    /* Update the LED on/off state */
+    if(ledState) {
+      out |= FLASHING_LED;  
+    } else {
+      out &= ~FLASHING_LED; 
+    }
+    
+    /* set the led pin to the new state value */
+    LED_PORT = out;      
 
   }
 

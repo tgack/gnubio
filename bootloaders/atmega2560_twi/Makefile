@@ -22,9 +22,9 @@ OUTPUT=twi_atmega2560
 #
 # Select the appropriate slave ID
 #
-SLAVE_ID=2
-#SLAVE_ID=3
-#SLAVE_ID=4
+# SLAVE_ID=2
+SLAVE_ID=3
+##SLAVE_ID=4
 
 #
 # Set the target MCU
@@ -50,7 +50,7 @@ BOOTLOAD_SECTION=0x3E000
 
 ODIR=obj
 OPTIMIZE=0
-DEBUG=3
+DEBUG=2
 
 
 
@@ -60,9 +60,9 @@ DEBUG=3
 #
 CC=$(TOOLPATH)/avr-gcc
 OBJCOPY=$(TOOLPATH)/avr-objcopy
-CFLAGS= -funsigned-char -funsigned-bitfields -O$(OPTIMIZE) -ffunction-sections -fdata-sections -g$(DEBUG) -Wall -mmcu=$(MCU) -c -std=gnu99 
+CFLAGS= -x c -funsigned-char -funsigned-bitfields -DDEBUG -O$(OPTIMIZE) -ffunction-sections -fdata-sections -fpack-struct -fshort-enums -mrelax -g$(DEBUG) -Wall -mmcu=$(MCU) -c -std=gnu99
 ASFLAGS=-c -mmcu=$(MCU) 
-LDFLAGS=-Wl,-Map="$(ODIR)/$(OUTPUT).map" -Wl,--start-group -Wl,--end-group -Wl,--gc-sections -Wl,--section-start=.text=$(BOOTLOAD_SECTION) -Wl,--section-start=.boot=0x0 -Wl,--undefined=__boot_vectors -mmcu=$(MCU)  
+LDFLAGS=-Wl,-Map="$(ODIR)/$(OUTPUT).map" -Wl,--start-group -Wl,--end-group -Wl,--gc-sections -mrelax -Wl,--section-start=.text=$(BOOTLOAD_SECTION) -mmcu=$(MCU)  
 LIBS=
 
 #
@@ -88,7 +88,7 @@ $(ODIR)/%.o: %.S
 #
 $(ODIR)/$(OUTPUT).hex: $(ODIR)/$(OUTPUT).elf
 	rm -f $(ODIR)/$(OUTPUT).hex
-	$(OBJCOPY) -O ihex -j .text -j .text_extended -j .data -j .boot --set-section-flags=.boot=alloc,load "$(ODIR)/$(OUTPUT).elf" "$(ODIR)/$(OUTPUT)_S$(SLAVE_ID).hex"
+	$(OBJCOPY) -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures "$(ODIR)/$(OUTPUT).elf" "$(ODIR)/$(OUTPUT)_S$(SLAVE_ID).hex"
 
 #
 # Link object files into the executable file
@@ -97,13 +97,14 @@ $(ODIR)/$(OUTPUT).elf: $(OBJ)
 	$(CC) -o $(ODIR)/$(OUTPUT).elf $(OBJ) $(LDFLAGS) $(LIBS)
 	
 
-#flash: $(ODIR)/$(OUTPUT).hex
-#	$(AVRDUDE) -c $(PROGRAMMER_TYPE) -p $(MCU) $(PROGRAMMER_ARGS) -U flash:w:"$(ODIR)/$(OUTPUT)_S$(SLAVE_ID).hex"
-
-#program: flash
 
 .PHONY: clean
 
+#
+# Clean does not delete the hex files as this
+# system defines the I2C address as a compile
+# time define.
+#
 clean:
 	rm -f \
 		$(ODIR)/*.o \
@@ -111,8 +112,6 @@ clean:
 		$(ODIR)/*.elf \
 		$(ODIR)/*.eep \
 		$(ODIR)/*.map
-
-#		$(ODIR)/*.hex \
 
 
 

@@ -16,9 +16,20 @@
 #include "twi.h"
 #include "flash_utilities.h"
 
+#define STRINGIFY(s) XSTRINGIFY(s)
+#define XSTRINGIFY(s) #s
+
 #define APP_END 0x1F000
 #define EXTENDED_SECTION
+
+#ifndef TWIID
+#pragma message "Using TWI Slave Address 2"
 #define TWI_SLAVE_ADDRESS 2
+#else
+#pragma message ("Using Makefile defined TWI Slave Address " STRINGIFY(TWIID))
+#define TWI_SLAVE_ADDRESS TWIID
+#endif
+
 #define RECEIVE_BUF_SIZE 80
 
 #define MESSAGE_START	0x1B	// = ESC = 27 decimal
