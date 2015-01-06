@@ -1,23 +1,26 @@
-GNUBio Slave 2 Bootloader programming
+GNUBio Slave 3 Bootloader programming
 
 Toolchain:
 	avr-gcc - Version 4.5.3
 	avr-binutils - Version 2.20.1.20100303
 
 Target Processor:
-	ATMEGA2560
+	ATMEGA328P
 
 Bootloader Firmware Image Name:
-	twi_atmega2560_S3.hex
+	twi_atmega328p_S3.hex
+
+Bootloader Flash Address Space (word address):
+	0x3800 - 0x3FFF
 
 Fuse Settings:
 	BODLEVEL: 4V3
-	OCDEN: Un-programmed
-	JTAGEN: Un-programmed
+	RSTDISBL: Un-programmed
+	DWEN: Un-programmed
 	SPIEN: Programmed
 	WDTON: Un-programmed
 	EESAVE: Un-programmed
-	BOOTSZ: 4096W_1F00
+	BOOTSZ: 2048W_3800
 	BOOTRST: Programmed
 	CKDIV8: Un-programmed
 	CDOUT: Un-programmed
@@ -41,11 +44,10 @@ Programming the target processor:
 		b. An EEPROM image with the bootload control byte is loaded at the time of programming.
 	Note: Bootload control byte is always 0xA5
 
-	
 Enable the bootloader:
-	1. Erase the contents of EEPROM address 4095. (value = 0xFF)
+	1. Erase the contents of EEPROM address 1023. (value = 0xFF)
 	2. Reset the micro-controller.
-	3. The slave micro-controller is now waiting for a program to be uploaded using TWI communication.
+	Note: The slave micro-controller is now waiting for a program to be uploaded using TWI communication.
 	
 Uploading a new application using the boot loader:
 	Pre-requisite: The host micro-controller depends on the Arduino boot loader: 
@@ -57,6 +59,5 @@ Uploading a new application using the boot loader:
 		b. An intel hex image of the host program is provided: gnubio_host_loader.cpp.hex
 		c. An example script file that utilizes avrdude, a serial port, and the intel hex file image is provided: load_host_firmware.sh
 	3. Upload the firmware image (intel hex file format) using the gbihexup utility
-		Ex. python gbihexup --baud=115200 --port=/dev/ttyUSB0 --file=slave_two_app.hex --target=3 -v
-		
+		Ex. python gbihexup --baud=115200 --port=/dev/ttyUSB0 --file=mega328_test.hex --target=4 -v
 		

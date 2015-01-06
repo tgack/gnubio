@@ -1,7 +1,15 @@
 GNUBio Slave 2 Bootloader programming
 
+Toolchain:
+	avr-gcc - Version 4.5.3
+	avr-binutils - Version 2.20.1.20100303
+
+Target Processor:
+	ATMEGA2560
+
 Bootloader Firmware Image Name:
 	twi_atmega2560_S2.hex
+
 
 Fuse Settings:
 	BODLEVEL: 4V3
@@ -26,6 +34,14 @@ Lock Bits:
 	BLB0: NO_LOCK
 	BLB1: NO_LOCK
 
+Programming the target processor:
+	1. Make sure fuses are programmed properly
+	2. Program target with the Bootloader Firmware Image using an apprpriat ISP programmer
+	3. Bootloader will be enabled by default except when;
+		a. EEPROM memory is preserved by the programming utility during programming.
+		b. An EEPROM image with the bootload control byte is loaded at the time of programming.
+	Note: Bootload control byte is always 0xA5
+
 	
 Enable the bootloader:
 	1. Erase the contents of EEPROM address 4095. (value = 0xFF)
@@ -42,4 +58,6 @@ Uploading a new application using the boot loader:
 		b. An intel hex image of the host program is provided: gnubio_host_loader.cpp.hex
 		c. An example script file that utilizes avrdude, a serial port, and the intel hex file image is provided: load_host_firmware.sh
 	3. Upload the firmware image (intel hex file format) using the gbihexup utility
-		Ex. python gbihexup --baud=115200 --port=/dev/ttyUSB0 --file=twi_atmega2560_S2.hex --target=2 -v
+		Ex. python gbihexup --baud=115200 --port=/dev/ttyUSB0 --file=slave_one_app.hex --target=2 -v
+		
+		
