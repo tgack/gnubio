@@ -82,12 +82,12 @@
 
 
 #define LINE_BUFFER_SIZE  256
-// #define FLASHING_LED 13
-#define FLASHING_LED 0x01
-#define COMM_LED  0x02
-#define LED_PORT PORTG
-#define LED_PIN  PING
-#define LED_DDR  DDRG
+#define FLASHING_LED 41
+#define COMM_LED  40
+
+#define RESET_SLAVE_1  25
+#define RESET_SLAVE_2  24
+#define RESET_SLAVE_3  23
 
 #define IIC_BUFFER_SIZE 64
 
@@ -99,6 +99,7 @@ unsigned char twi_buffer[IIC_BUFFER_SIZE];
 boolean streamEvent = false;
 unsigned int lastError;
 unsigned char targetAddress;
+unsigned char slaveID;
 boolean eraseTargetFlag;
 unsigned long previousTickCount;
 unsigned long ledFlashPeriod;
@@ -132,7 +133,7 @@ unsigned char dataLength(String ihexLine);
 unsigned int recordAddress(String ihexLine);
 unsigned char recordType(String ihexLine);
 unsigned int getAddressExtension(String ihexLine);
-
+boolean resetProcess(unsigned char target);
 /*
  * Setup section.
  * Setup serial communcation.
@@ -141,15 +142,19 @@ void setup() {
 
 //  pinMode(FLASHING_LED, OUTPUT);
   /* Set PORTG.0 and PORTG.1 direction to output */
-  LED_DDR |= (FLASHING_LED | COMM_LED);
+  pinMode(FLASHING_LED, OUTPUT);
+  pinMode(COMM_LED, OUTPUT);
   
-  /* Set PORTA.1,2,3 direction to output. These are the slave reset lines */
-  DDRA |= 0x0E;
-  PORTA = 0x0E;    // Force the processor into reset
-  /* Delay 100mS */
-  delay(100);
-  /* Release the slave processors from reset */
-  PORTA = 0x00;
+  pinMode(RESET_SLAVE_1, OUTPUT);
+  pinMode(RESET_SLAVE_2, OUTPUT);
+  pinMode(RESET_SLAVE_3, OUTPUT);
+  
+  
+  resetProcess(1);
+  resetProcess(2);
+  resetProcess(3);
+  
+  
   
 
   /* Start the local serial port. */
@@ -177,7 +182,6 @@ void setup() {
  */
 void loop() {
 
-  unsigned char ledShadow;
   
   flashLED();
 
@@ -190,9 +194,7 @@ void loop() {
   /* Monitor incomming requests */
   if(streamEvent) {
 
-    ledShadow = LED_PIN;
-    ledShadow |= COMM_LED;
-    LED_PORT = ledShadow;
+    digitalWrite(COMM_LED, HIGH);
     
     if(processRequest()) {
       sendOKResponse();
@@ -206,10 +208,7 @@ void loop() {
     streamEvent = false;
     lineBuffer = "";    
     
-    ledShadow = LED_PIN;
-    ledShadow &= ~COMM_LED;
-    LED_PORT = ledShadow;
-    
+    digitalWrite(COMM_LED, LOW);    
   }
 
 
@@ -327,6 +326,16 @@ boolean processRequest() {
       eraseTargetFlag = false;
     }
   }
+  else if(lineBuffer.startsWith("#") ) {
+    /* This is a reset control request from the host application. */
+    /* Recover the Slave ID and process the reset request. */
+    lineBuffer.replace("#", "");
+    
+    slaveID = (lineBuffer.toInt());
+    
+    rValue = resetProcess(slaveID);
+    
+  }
   else {
     if(lineBuffer.length() == 0) {
       rValue = true;
@@ -362,6 +371,62 @@ unsigned char getIHexByteValue(String ihexLine, unsigned int linePosition, unsig
 
   return (unsigned char)(rValue & 0x00FF);
 
+}
+
+/*
+ * Function: resetProcess
+ * Input:
+ *    1 - Slave 1 (address 2),
+ *    2 - Slave 2 (address 3),
+ *    3 - Slave 3 (address 4)
+ * Output:
+ *    None
+ * Returns:
+ *    true - Valid target received, reset process executed
+ *    false - Unknown slave ID
+ */
+boolean resetProcess(unsigned char target)
+{
+  boolean rValue;
+
+  
+  rValue = false;
+
+  
+  switch(target) {
+  case 1:
+    Serial.println("Resetting slave 1");
+    digitalWrite(RESET_SLAVE_1, LOW);
+    delay(100);
+    digitalWrite(RESET_SLAVE_1, HIGH);
+    delay(100);
+    digitalWrite(RESET_SLAVE_1, LOW);
+    rValue = true;
+    break;
+  case 2:
+    Serial.println("Resetting slave 2");
+    digitalWrite(RESET_SLAVE_2, LOW);
+    delay(100);
+    digitalWrite(RESET_SLAVE_2, HIGH);
+    delay(100);
+    digitalWrite(RESET_SLAVE_2, LOW);
+    rValue = true;
+    break;
+  case 3:
+    Serial.println("Resetting slave 3");
+    digitalWrite(RESET_SLAVE_3, LOW);
+    delay(100);
+    digitalWrite(RESET_SLAVE_3, HIGH);
+    delay(100);
+    digitalWrite(RESET_SLAVE_3, LOW);
+  
+    rValue = true;
+      break;
+  default:
+    rValue = false;
+      break;
+  }
+  return rValue;
 }
 
 /* 
@@ -578,7 +643,7 @@ boolean verifyLineChecksum()
 
 void flashLED() {
   unsigned long currentTickCount;
-  unsigned char out;
+
   currentTickCount = millis();
 
   /*
@@ -590,18 +655,13 @@ void flashLED() {
     ledState = 1 - ledState;
 
     
-    /* Read the port pin into a shadow register. */
-    out = LED_PIN;       
-    
     /* Update the LED on/off state */
     if(ledState) {
-      out |= FLASHING_LED;  
+      digitalWrite(FLASHING_LED, HIGH);
     } else {
-      out &= ~FLASHING_LED; 
+      digitalWrite(FLASHING_LED, LOW);
     }
     
-    /* set the led pin to the new state value */
-    LED_PORT = out;      
 
   }
 

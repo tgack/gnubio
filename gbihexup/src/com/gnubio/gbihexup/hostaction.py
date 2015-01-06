@@ -118,6 +118,28 @@ class HostAction(object):
             
         return rValue
     
+    def reset_target_by_address(self, target):
+        """
+            Set the target address for firmware update
+        """
+        
+        rValue = False
+        
+        try:
+            self.serialPort.timeout = 1
+            self.serialPort.write("#{0}\r".format(target-1))
+            self.serialPort.flush()
+            response = self.serialPort.readline()
+            
+            if "OK" in response:
+                rValue = True 
+            
+        except Exception as ex:
+            self.lastExceptionMessage = ex
+            rValue = False
+            
+        return rValue
+    
     def send_image_line(self, line):
         
         """

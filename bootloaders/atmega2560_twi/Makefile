@@ -22,8 +22,8 @@ OUTPUT=twi_atmega2560
 #
 # Select the appropriate slave ID
 #
-# SLAVE_ID=2
-SLAVE_ID=3
+SLAVE_ID=2
+# SLAVE_ID=3
 ##SLAVE_ID=4
 
 #

@@ -161,10 +161,13 @@ if __name__ == "__main__":
                 if False == result:
                     exitCode = ERROR_CODE.INVALID_PARAMETER
                     break;
-                #else:
-                    # Give the Arduino a chance to catch up. The Mega2560 can't
-                    # keep up with a fast host.
-                #    time.sleep(0.02)
+                
+            # Drive a reset to the target processor
+            result = hostAction.reset_target_by_address(targetAddress)
+            
+            if False == result:
+                exitCode = ERROR_CODE.INVALID_PARAMETER
+                
         else:
             
             print("Unable to set target address")
