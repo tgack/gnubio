@@ -14,6 +14,7 @@ Created on Nov 13, 2014
 import sys
 import glob
 import serial
+from time import sleep
 
 from errorcodes import ERROR_CODE
 
@@ -104,12 +105,22 @@ class HostAction(object):
         
         try:
             self.serialPort.timeout = 1
-            self.serialPort.write("%{0}\r".format(target))
-            self.serialPort.flush()
-            response = self.serialPort.readline()
+            retries = ['attempt1', 'attempt2', 'attempt3', 'attempt4', 'attempt5']
             
-            if "OK" in response:
-                rValue = True 
+            #
+            # Try up to 5 times to get the brokers attention
+            #
+            for attempt in retries:
+                self.serialPort.write("%{0}\r".format(target))
+                self.serialPort.flush()
+                response = self.serialPort.readline()
+            
+                if "OK" in response:
+                    rValue = True 
+                    break
+                else:
+                    sleep(1.0)
+                
             
         except Exception as ex:
             rValue = ERROR_CODE.INVALID_PARAMETER
@@ -126,13 +137,25 @@ class HostAction(object):
         rValue = False
         
         try:
-            self.serialPort.timeout = 1
-            self.serialPort.write("#{0}\r".format(target-1))
-            self.serialPort.flush()
-            response = self.serialPort.readline()
             
-            if "OK" in response:
-                rValue = True 
+            retries = ['attempt1', 'attempt2', 'attempt3', 'attempt4', 'attempt5']
+            
+            #
+            # Make up to 5 attempts before giving up
+            #
+            for attempt in retries:
+                self.serialPort.timeout = 1
+                self.serialPort.write("#{0}\r".format(target-1))
+                self.serialPort.flush()
+                response = self.serialPort.readline()
+            
+                if "OK" in response:
+                    rValue = True
+                    break
+                else:
+                    sleep(1.0)
+                    
+                 
             
         except Exception as ex:
             self.lastExceptionMessage = ex
