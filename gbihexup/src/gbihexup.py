@@ -135,6 +135,7 @@ if __name__ == "__main__":
         # Try to set the firmware image target address, 
         # if successful, read the image into a list of strings
         # and send the list
+        print_extra_output(verboseOutput, "Erasing application flash for target address {0}".format(targetAddress))
         if True == hostAction.set_target_address(targetAddress):
             
             print_extra_output(verboseOutput, "Updating firmware for target address {0}".format(targetAddress))
@@ -150,23 +151,52 @@ if __name__ == "__main__":
             
             # Transmit the firmware image
             for each_line in content:
+                if lineCount == 0:
+                    '''
+                        Save the first line in the file until the end. That way, the boot loader
+                        will not lauch the application if something goes wrong during normal programming
+                    '''
+                    first_line = each_line
+                    
                 lineCount = lineCount + 1
-                print_extra_output(verboseOutput, "Line {0}: {1}".format(lineCount, each_line.strip(' \t\n\r')))
                 
-                # ignore any zero length lines.
-                request = each_line.strip(' \t\n\r')
+                '''
+                    Don't write the first record until the rest of the application
+                    is written
+                '''
+                if lineCount > 1:
+                    print_extra_output(verboseOutput, "Line {0}: {1}".format(lineCount, each_line.strip(' \t\n\r')))
+                    
+                    # ignore any zero length lines.
+                    request = each_line.strip(' \t\n\r')
+                    if len(request) > 0:
+                        result = hostAction.send_image_line(each_line)
+                    
+                    if False == result:
+                        exitCode = ERROR_CODE.INVALID_PARAMETER
+                        break;
+            
+            
+            if exitCode == ERROR_CODE.SUCCESS:
+                '''
+                    The rest of the program has been successfully written.
+                    Write the first record into the IVT. This will allow
+                    the boot loader to launch the application on next reset
+                '''
+                print_extra_output(verboseOutput, "Line 1: {0}".format(first_line.strip(' \t\n\r')))
+                request = first_line.strip(' \t\n\r')
                 if len(request) > 0:
-                    result = hostAction.send_image_line(each_line)
-                
-                if False == result:
-                    exitCode = ERROR_CODE.INVALID_PARAMETER
-                    break;
-                
-            # Drive a reset to the target processor
-            result = hostAction.reset_target_by_address(targetAddress)
+                    result = hostAction.send_image_line(first_line)
+                    
             
             if False == result:
+                print_extra_output(verboseOutput, "Application upload Failed!")
                 exitCode = ERROR_CODE.INVALID_PARAMETER
+            else:
+                print_extra_output(verboseOutput, "Application upload Success: Resetting target.")
+                # Drive a reset to the target processor
+                result = hostAction.reset_target_by_address(targetAddress)
+                
                 
         else:
             

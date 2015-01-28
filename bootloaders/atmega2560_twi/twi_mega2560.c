@@ -19,6 +19,7 @@
 #define STRINGIFY(s) XSTRINGIFY(s)
 #define XSTRINGIFY(s) #s
 
+
 #define APP_END 0x1F000
 #define EXTENDED_SECTION
 
@@ -29,6 +30,7 @@
 #pragma message ("Using Makefile defined TWI Slave Address " STRINGIFY(TWIID))
 #define TWI_SLAVE_ADDRESS TWIID
 #endif
+
 
 #define RECEIVE_BUF_SIZE 80
 
@@ -91,7 +93,7 @@ static uint8_t bootLoadMode = BOOT_MODE_STK500;
 
 int main(void)
 {
-	
+
 	requestFlag = false;
 	responseFlag = false;
 	
@@ -138,6 +140,8 @@ int main(void)
 	twi_setAddress(TWI_slaveAddress);
 	twi_attachSlaveRxEvent(onTWIReceive);
 	twi_attachSlaveTxEvent(onTWIReadRequest);
+	
+	/* Initialize the internal flash peripheral */
 	
 	
 	/* Start interrupts, Note: USE ONLY TWI INTERRUPT. */
@@ -245,6 +249,7 @@ static void processRequest(void)
  */
 static bool processEraseRequest(uint8_t* commandBuffer, uint16_t size) 
 {
+	
 	eraseAddress = 0;
 	
 	/* Build up an OK response */	
@@ -276,35 +281,61 @@ static bool processEraseRequest(uint8_t* commandBuffer, uint16_t size)
 static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
 {
 //	uint8_t temp[4];
+	uint8_t write_buffer[16];
+	uint16_t write_buffer_index;
+	uint32_t app_write_address;
 	uint8_t *p;
 	uint16_t bufSize;
-	
+	uint16_t index;	
 	bufSize = (((commandBuffer[1]) << 8) | (commandBuffer[2]));
 	p = &commandBuffer[10];
 	
-	/* Check page boundary and erase pages as the address comes around */
-	if(address == eraseAddress) {
-		/* Perform basic bounds check and don't erase this boot loader */
-		if(eraseAddress <= (APP_END - SPM_PAGESIZE)) {
-			erase_flash_page(eraseAddress);
-			eraseAddress += SPM_PAGESIZE;
-		}
-		
-		
-	}
+	// Make sure the host application knows the processor is busy.
+	build_response_buffer(CMD_CHIP_ERASE, STATUS_CMD_FAILED);
 	
-		
-	write_flash_page(p, address, bufSize);	
-	
-	
-	/* Build up an OK response */
-	build_response_buffer(CMD_PROGRAM_FLASH_ISP, STATUS_CMD_OK);
-
 
 	if(0x00000000 == address) {
 		/* If the reset vector gets re-written, assume next reset is a boot app action. */
 		eeprom_write_byte(BOOT_MODE_ADDRESS, BOOT_MODE_APPLICATION);			
 	}
+
+	/* Check page boundary and erase pages as the address comes around */
+	while( (eraseAddress < (address + bufSize)) && (eraseAddress <= (APP_END - SPM_PAGESIZE)) ) {
+		/* Perform basic bounds check and don't erase this boot loader */
+		erase_flash_page(eraseAddress);
+		eraseAddress += SPM_PAGESIZE;
+	}
+
+		
+//	write_flash_page(p, address, bufSize);	
+	write_buffer_index = 0;
+	app_write_address = address;
+	for(index=0; index < bufSize; index++) {
+		write_buffer[write_buffer_index] = p[index];
+		address++;
+		write_buffer_index++;
+		
+		if(0x00000000 == (address & 0x0000000F)) {
+			write_flash_page(write_buffer, app_write_address, write_buffer_index);
+			app_write_address = address;
+			write_buffer_index = 0;
+		}
+		
+		
+		
+//		write_flash_page(p, address, 2);
+//		p += 2;
+//		address += 2;
+	}
+	
+	if(write_buffer_index) {
+		write_flash_page(write_buffer, app_write_address, write_buffer_index);
+	}
+	
+	/* Build up an OK response */
+	build_response_buffer(CMD_PROGRAM_FLASH_ISP, STATUS_CMD_OK);
+
+
 
 
 
@@ -328,6 +359,7 @@ static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
 static bool processReadFlashIsp(uint8_t* commandBuffer, uint16_t size)
 {
 	bool rValue = false;
+	uint16_t index;
 	uint16_t bufSize;
 //	uint16_t temp;
 	
@@ -340,7 +372,10 @@ static bool processReadFlashIsp(uint8_t* commandBuffer, uint16_t size)
 		rValue = true;
 		
 		//memcpy_P(&twi_message_buffer[7], (const void*)address, bufSize);
-		memcpy_PF(&twi_message_buffer[7], (uint_farptr_t)address, bufSize);
+		for(index=0; index < bufSize; index++) {
+			//memcpy_PF(&twi_message_buffer[7], (uint_farptr_t)address, bufSize);
+			memcpy_PF(&twi_message_buffer[7+index], (uint_farptr_t)address+index, 1);
+		}
 		address += bufSize;
 		
 		buildMessageHeader(bufSize);
@@ -436,6 +471,7 @@ static bool processLoadAddressRequest(uint8_t* commandBuffer, uint16_t size)
 	
 	address = ((((uint32_t)commandBuffer[1]) << 24) | (((uint32_t)commandBuffer[2]) << 16) | 
 		(((uint32_t)commandBuffer[3]) << 8) | ((uint32_t)commandBuffer[4])); // Convert the word address to byte address
+
 	
 	if(address < (APP_END << 1)) {
 		build_response_buffer(CMD_LOAD_ADDRESS, STATUS_CMD_OK);

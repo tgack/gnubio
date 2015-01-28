@@ -80,6 +80,13 @@
 #define STATUS_STK500_WRITE_ERROR    0xD0
 #define STATUS_STK500_READ_ERROR     0xD1
 
+#define LINE_CHECKSUM_ERROR          0x10
+#define LINE_WRITE_ERROR             0x11
+#define LINE_VERIFY_ERROR            0x12
+#define ERROR_ADDRESS_WRITE          0x13
+#define LINE_ADDRESS_RESP_ERROR      0x14
+#define LINE_PROGRAM_TIMEOUT         0x15
+#define LINE_WRITE_REQUEST_ERROR     0x16
 
 #define LINE_BUFFER_SIZE  256
 #define FLASHING_LED 41
@@ -100,7 +107,6 @@ boolean streamEvent = false;
 unsigned int lastError;
 unsigned char targetAddress;
 unsigned char slaveID;
-boolean eraseTargetFlag;
 unsigned long previousTickCount;
 unsigned long ledFlashPeriod;
 unsigned char ledState;
@@ -140,35 +146,35 @@ boolean resetProcess(unsigned char target);
  */
 void setup() {
 
-//  pinMode(FLASHING_LED, OUTPUT);
+  //  pinMode(FLASHING_LED, OUTPUT);
   /* Set PORTG.0 and PORTG.1 direction to output */
   pinMode(FLASHING_LED, OUTPUT);
   pinMode(COMM_LED, OUTPUT);
-  
+
   pinMode(RESET_SLAVE_1, OUTPUT);
   pinMode(RESET_SLAVE_2, OUTPUT);
   pinMode(RESET_SLAVE_3, OUTPUT);
-  
-  
+
+
   resetProcess(1);
   resetProcess(2);
   resetProcess(3);
-  
-  
-  
+
+
+
 
   /* Start the local serial port. */
   Serial.begin(115200);
-  
+
   /* Start the I2C system in master mode. */
   Wire.begin();
-  
+
 
   /* Initialize global variables. */
   streamEvent = false;
   lastError = 0;
   targetAddress = 0;
-  eraseTargetFlag = false;
+  //  eraseTargetFlag = false;
 
   ledFlashPeriod = 250;
   ledState = 0;
@@ -182,7 +188,7 @@ void setup() {
  */
 void loop() {
 
-  
+
   flashLED();
 
   /* Read characters in from the serial port. */
@@ -195,19 +201,19 @@ void loop() {
   if(streamEvent) {
 
     digitalWrite(COMM_LED, HIGH);
-    
+
     if(processRequest()) {
       sendOKResponse();
-      ledFlashPeriod = 250;
+
     }
     else {
       sendErrorResponse();
-      ledFlashPeriod = 100;
+
     }
 
     streamEvent = false;
     lineBuffer = "";    
-    
+
     digitalWrite(COMM_LED, LOW);    
   }
 
@@ -245,27 +251,12 @@ boolean processRequest() {
 
     /* Check for errors in the line. */
     if(false == verifyLineChecksum()) {
+      lastError = LINE_CHECKSUM_ERROR;
       return false;
     }
 
 
     /* This a line from an intel hex file, process as appropriate. */
-    if(eraseTargetFlag) {
-
-      rValue = requestTargetErase(targetAddress);
-      if (false == rValue)  {
-        return false;
-      } 
-    }
-
-
-
-
-    /* Make sure all one time events are cleared */
-    eraseTargetFlag = false;
-
-
-
     if(0 != targetAddress) {
 
       /* Checksum has already been verified, it is safe process the record */
@@ -291,9 +282,18 @@ boolean processRequest() {
         if(requestRecordWrite(targetAddress, address, dataBuffer, byteCount)) {
           /* Verify the record was written correctly. */
           rValue = requestRecordVerify(targetAddress, address, dataBuffer, byteCount);
+
+          if(false == rValue) {
+            ledFlashPeriod = 50;
+
+          }
+          else {
+            ledFlashPeriod = 250;
+          }
         } 
         else {
           rValue = false;
+          ledFlashPeriod = 100;
         }
         break;
       case 2:    /* Extended Setment Address */
@@ -304,7 +304,7 @@ boolean processRequest() {
         rValue = true;
         break;
       }
-      
+
     }
 
   }
@@ -317,24 +317,24 @@ boolean processRequest() {
     targetAddress = (lineBuffer.toInt());
 
     if( (targetAddress > 0) && (targetAddress < 128) ) {
-      rValue = true;
-      eraseTargetFlag = true;
+      /* rValue = true; */
+      rValue = requestTargetErase(targetAddress);
       flashAddressExtension = 0;
     }
     else  {
       rValue = false;
-      eraseTargetFlag = false;
+      //      eraseTargetFlag = false;
     }
   }
   else if(lineBuffer.startsWith("#") ) {
     /* This is a reset control request from the host application. */
     /* Recover the Slave ID and process the reset request. */
     lineBuffer.replace("#", "");
-    
+
     slaveID = (lineBuffer.toInt());
-    
+
     rValue = resetProcess(slaveID);
-    
+
   }
   else {
     if(lineBuffer.length() == 0) {
@@ -389,13 +389,13 @@ boolean resetProcess(unsigned char target)
 {
   boolean rValue;
 
-  
+
   rValue = false;
 
-  
+
   switch(target) {
   case 1:
-    Serial.println("Resetting slave 1");
+
     digitalWrite(RESET_SLAVE_1, LOW);
     delay(100);
     digitalWrite(RESET_SLAVE_1, HIGH);
@@ -404,7 +404,7 @@ boolean resetProcess(unsigned char target)
     rValue = true;
     break;
   case 2:
-    Serial.println("Resetting slave 2");
+
     digitalWrite(RESET_SLAVE_2, LOW);
     delay(100);
     digitalWrite(RESET_SLAVE_2, HIGH);
@@ -413,18 +413,18 @@ boolean resetProcess(unsigned char target)
     rValue = true;
     break;
   case 3:
-    Serial.println("Resetting slave 3");
+
     digitalWrite(RESET_SLAVE_3, LOW);
     delay(100);
     digitalWrite(RESET_SLAVE_3, HIGH);
     delay(100);
     digitalWrite(RESET_SLAVE_3, LOW);
-  
+
     rValue = true;
-      break;
+    break;
   default:
     rValue = false;
-      break;
+    break;
   }
   return rValue;
 }
@@ -457,10 +457,10 @@ unsigned char dataLength(String ihexLine)
 unsigned int getAddressExtension(String ihexLine)
 {
   unsigned int rValue;
-  
+
   rValue = getIHexByteValue(ihexLine, 9, 0) << 8;
   rValue |= getIHexByteValue(ihexLine, 11, 0);
-  
+
   return rValue;
 }
 
@@ -588,7 +588,7 @@ void sendOKResponse() {
  */
 void sendErrorResponse() {
   Serial.print("ERROR: ");
-  Serial.print(lastError, DEC);
+  Serial.print(lastError, HEX);
   Serial.println("");
   Serial.flush();
 }
@@ -654,14 +654,15 @@ void flashLED() {
 
     ledState = 1 - ledState;
 
-    
+
     /* Update the LED on/off state */
     if(ledState) {
       digitalWrite(FLASHING_LED, HIGH);
-    } else {
+    } 
+    else {
       digitalWrite(FLASHING_LED, LOW);
     }
-    
+
 
   }
 
@@ -699,7 +700,7 @@ boolean readSTK500V2Response(unsigned char device, unsigned char *buffer, unsign
     index++;
   }
 
-  
+
   /* Check the data for errors */
   rValue = false;
   checkSum = 0;
@@ -798,7 +799,7 @@ boolean requestRecordWrite(unsigned char deviceAddress, unsigned int flashAddres
 {
   unsigned char request_buffer[64];
   unsigned char response_buffer[16];
-
+  unsigned char retries;
   unsigned int sourceIndex, destIndex;
   boolean rValue;
   rValue = false;
@@ -811,8 +812,8 @@ boolean requestRecordWrite(unsigned char deviceAddress, unsigned int flashAddres
     request_buffer[2] = (flashAddressExtension & 0x00FF);    
     request_buffer[3] = (flashAddress >> 8);    
     request_buffer[4] = (flashAddress & 0xFF); 
- 
- 
+
+
     /* Make the Load Address request */
     if(true == writeSTK500V2Command(deviceAddress, request_buffer, LOAD_ADDRESS_CMD_SIZE)) {
       if(true == readSTK500V2Response(deviceAddress, response_buffer,LOAD_ADDRESS_RESP_SIZE)) {
@@ -821,13 +822,20 @@ boolean requestRecordWrite(unsigned char deviceAddress, unsigned int flashAddres
           rValue = true;
         } 
         else {
+          lastError = LINE_WRITE_ERROR;
           return false;
+
         }
       } 
       else {
+        lastError = LINE_ADDRESS_RESP_ERROR;
         return false;
       }
     }
+    else {
+      lastError = ERROR_ADDRESS_WRITE;
+    }
+
 
     /* If the process makes it this far, the load address command was exectuted properly. */
     /* Write the intel hex record to the tartget device */
@@ -856,19 +864,31 @@ boolean requestRecordWrite(unsigned char deviceAddress, unsigned int flashAddres
       /* Request was written properly */
 
       /* Give the target time to erase a page if necessary and write the data block to flash. */
-      /* The data sheet implies 4.5mS maximum for page erase/write, use 10mS for wait time */
-      delay(25);
+      /* The data sheet implies 4.5mS maximum for page erase/write, use 25mS for wait time */
+      //      delay(50);
 
       /* Read back the response */
-      if(true == readSTK500V2Response(deviceAddress, response_buffer,PROG_FLASH_RESP_SIZE)) {
-        /* Check the pass fail response */
-        if(response_buffer[5] == CMD_PROGRAM_FLASH_ISP && response_buffer[6] == STATUS_CMD_OK) {
-          rValue=true;
+      for(retries = 0; retries < 100; retries++) { 
+        delay(10);
+        if(true == readSTK500V2Response(deviceAddress, response_buffer,PROG_FLASH_RESP_SIZE)) {
+          /* Check the pass fail response */
+          if(response_buffer[5] == CMD_PROGRAM_FLASH_ISP && response_buffer[6] == STATUS_CMD_OK) {
+            rValue=true;
+            break;
+          }
         }
+        
+      }
+      
+      
+      if(retries >= 100) {
+        lastError = LINE_PROGRAM_TIMEOUT;
+      }
 
-      } 
+
     } 
     else {
+      lastError = LINE_WRITE_REQUEST_ERROR;
       rValue = false;  
     }
 
@@ -900,10 +920,10 @@ boolean requestRecordVerify(unsigned char deviceAddress, unsigned int flashAddre
   boolean rValue;
   unsigned char request_buffer[16];
   unsigned char response_buffer[64];
-  
+
   unsigned int i, localIndex, remoteIndex;
   rValue = false;
-  
+
   if(deviceAddress > 0 && deviceAddress < 128) {
     /* Start by issuing a load address command */
     request_buffer[0] = CMD_LOAD_ADDRESS;
@@ -927,35 +947,42 @@ boolean requestRecordVerify(unsigned char deviceAddress, unsigned int flashAddre
         return false;
       }
     }
-    
+
     /* Read back the defined record. */
     request_buffer[0] = CMD_READ_FLASH_ISP;
     request_buffer[1] = (bufferSize >> 8);
     request_buffer[2] = (bufferSize & 0x00FF);
     request_buffer[3] = 0;
-    
+
     if(true == writeSTK500V2Command(deviceAddress, request_buffer, READ_FLASH_REQUEST_SIZE)) {
       delay(5);
       if(true == readSTK500V2Response(deviceAddress, response_buffer, READ_FLASH_RESP_SIZE + bufferSize)) {
         rValue = true;
-      } else {
+      } 
+      else {
         rValue = false;
       }
-    } else {
+    } 
+    else {
       rValue = false;
     }
   }
-  
+
   /* If the communication requests succeed, compare the two buffers. */
   if(rValue) {
-    
+
     /* set up some data indexes */
     localIndex = 0;
     remoteIndex = 7;
-    
+
     /* Compare the remote data to the local data */
+//    Serial.print("Line: ");    
     for(i=0; i<bufferSize; i++)
     {
+//      Serial.print(dataBuffer[localIndex], HEX);
+//      Serial.print(":");
+//      Serial.print(response_buffer[remoteIndex], HEX);
+//      Serial.print(", ");
       if(dataBuffer[localIndex] != response_buffer[remoteIndex]) {
         /* If there's an error, fail the function */
         rValue = false;
@@ -965,8 +992,8 @@ boolean requestRecordVerify(unsigned char deviceAddress, unsigned int flashAddre
       remoteIndex++;
     }
   }
-  
-  
+
+
   return rValue;
 }
 
@@ -1000,7 +1027,7 @@ boolean requestTargetErase(unsigned char deviceAddress) {
 
     /* Make the Flash Erase Request */
     if(true == writeSTK500V2Command(deviceAddress, request_buffer, FLASH_ERASE_CMD_SIZE)) {
-      // Get the response
+      delay(50);
       if( true == readSTK500V2Response(deviceAddress, response_buffer,FLASH_ERASE_RSP_SIZE)) {
         /* Check the pass fail response */
         if(response_buffer[5] == CMD_CHIP_ERASE_ISP && response_buffer[6] == STATUS_CMD_OK) {
@@ -1013,6 +1040,8 @@ boolean requestTargetErase(unsigned char deviceAddress) {
       else {
         lastError = STATUS_STK500_READ_ERROR;
       }
+
+
     } 
     else {
       lastError = STATUS_STK500_WRITE_ERROR;
@@ -1021,6 +1050,8 @@ boolean requestTargetErase(unsigned char deviceAddress) {
 
   return rValue;  
 }
+
+
 
 
 

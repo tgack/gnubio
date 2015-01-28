@@ -104,7 +104,7 @@ class HostAction(object):
         rValue = False
         
         try:
-            self.serialPort.timeout = 1
+            self.serialPort.timeout = 5
             retries = ['attempt1', 'attempt2', 'attempt3', 'attempt4', 'attempt5']
             
             #
