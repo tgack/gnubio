@@ -1,0 +1,21 @@
+MEGA2560 Jtag Wedge
+
+To make debugging the ATMega2560 bootloader a bit easier, an arduio Mega260 was wired
+to an AVR JTAGICE3 emulator. This allows for line debugging over JTAG. Further testing was accomplished
+erasing Slave 1 and connecting the I2C bus and a ground connection between the GNUBio target hardware
+and the Mege2560 board.
+
+Arduino Mega2560 JTAG with JTAGICE3 using a Squib Cable
+
+Arduino -> JTAGICE3 Connections
+
+A4 -> TCK (pin 1)
+A5 -> TMS (pin 5)
+A6 -> TDO (pin 3)
+A7 -> TDI (pin 9)
+
+Reset -> nSRST (pin 6)
+5V -> VTG (pin 4)
+GND -> GND (pin 10)
+GND -> GND (pin 2)
+
