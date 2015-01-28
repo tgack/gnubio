@@ -20,7 +20,7 @@ Fuse Settings:
 	SPIEN: Programmed
 	WDTON: Un-programmed
 	EESAVE: Un-programmed
-	BOOTSZ: 4096W_1F00
+	BOOTSZ: 4096W_1F000
 	BOOTRST: Programmed
 	CKDIV8: Un-programmed
 	CDOUT: Un-programmed
