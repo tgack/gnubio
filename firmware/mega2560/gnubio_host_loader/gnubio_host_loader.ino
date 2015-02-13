@@ -505,24 +505,6 @@ unsigned char recordType(String ihexLine)
 
 
 
-/* 
- * Function: serialEvent - 
- *    Function called whenever a serial character is received
- *
- * Parameters: None
- *
- * Return: nothing
- */
-/*
-void serialEvent() {
- 
- while( (Serial.available() > 0)) {
- streamEvent = processSerialStream(Serial.read());
- }
- }
- */
-
-
 /*
  * Function: processSerialStream
  *
@@ -589,7 +571,7 @@ void sendOKResponse() {
 void sendErrorResponse() {
   Serial.print("ERROR: ");
   Serial.print(lastError, HEX);
-  Serial.println("");
+  Serial.println("h");
   Serial.flush();
 }
 
@@ -865,7 +847,7 @@ boolean requestRecordWrite(unsigned char deviceAddress, unsigned int flashAddres
 
       /* Give the target time to erase a page if necessary and write the data block to flash. */
       /* The data sheet implies 4.5mS maximum for page erase/write, use 25mS for wait time */
-      //      delay(50);
+      /* delay(50); */
 
       /* Read back the response */
       for(retries = 0; retries < 100; retries++) { 

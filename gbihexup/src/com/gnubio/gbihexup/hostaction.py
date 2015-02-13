@@ -23,6 +23,7 @@ class HostAction(object):
     def __init__(self):
         self.serialPort = serial.Serial()
         self.lastExceptionMessage = ""
+        self.lastErrorMessage = ""
     
     def serial_port_list(self):
         
@@ -110,7 +111,7 @@ class HostAction(object):
             #
             # Try up to 5 times to get the brokers attention
             #
-            for attempt in retries:
+            for atempt in retries:
                 self.serialPort.write("%{0}\r".format(target))
                 self.serialPort.flush()
                 response = self.serialPort.readline()
@@ -143,7 +144,7 @@ class HostAction(object):
             #
             # Make up to 5 attempts before giving up
             #
-            for attempt in retries:
+            for atempt in retries:
                 self.serialPort.timeout = 1
                 self.serialPort.write("#{0}\r".format(target-1))
                 self.serialPort.flush()
@@ -171,7 +172,7 @@ class HostAction(object):
            zero length. 
         """
         rValue = False
-        
+        sleep(0.05)
         try:
             
             self.serialPort.timeout = 5
@@ -183,6 +184,9 @@ class HostAction(object):
                 
                 if "OK" in response:
                     rValue = True
+                    self.lastErrorMessage = "SUCCESS"
+                else:
+                    self.lastErrorMessage = response
             else:
                 rValue = False
             

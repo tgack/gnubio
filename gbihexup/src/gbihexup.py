@@ -190,7 +190,7 @@ if __name__ == "__main__":
                     
             
             if False == result:
-                print_extra_output(verboseOutput, "Application upload Failed!")
+                print_extra_output(verboseOutput, "Application upload Failed: {0}".format(hostAction.lastErrorMessage))
                 exitCode = ERROR_CODE.INVALID_PARAMETER
             else:
                 print_extra_output(verboseOutput, "Application upload Success: Resetting target.")
