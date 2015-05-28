@@ -276,6 +276,11 @@ static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
 //	uint8_t temp[4];
 	uint8_t *p;
 	uint16_t bufSize;
+	uint16_t index;	
+	uint32_t app_write_address;
+	uint16_t write_buffer_index;
+	uint8_t write_buffer[16];
+
 	
 	bufSize = (((commandBuffer[1]) << 8) | (commandBuffer[2]));
 	p = &commandBuffer[10];
@@ -299,8 +304,28 @@ static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
 	
 	
 		
-	write_flash_page(p, address, bufSize);	
+//	write_flash_page(p, address, bufSize);	
+	write_buffer_index = 0;
+	app_write_address = address;
+	for(index=0; index < bufSize; index++) {
+		write_buffer[write_buffer_index] = p[index];
+		address++;
+		write_buffer_index++;
+		
+		if(0x00000000 == (address & 0x0000000F)) {
+			write_flash_page(write_buffer, app_write_address, write_buffer_index);
+			app_write_address = address;
+			write_buffer_index = 0;
+		}
+		
+//		write_flash_page(p, address, 2);
+//		p += 2;
+//		address += 2;
+	}
 	
+	if(write_buffer_index) {
+		write_flash_page(write_buffer, app_write_address, write_buffer_index);
+	}	
 	
 	/* Build up an OK response */
 	build_response_buffer(CMD_PROGRAM_FLASH_ISP, STATUS_CMD_OK);
