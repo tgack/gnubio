@@ -281,15 +281,22 @@ static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
 	p = &commandBuffer[10];
 	
 	/* Check page boundary and erase pages as the address comes around */
-	if(address == eraseAddress) {
+//	if(address == eraseAddress) {
+//		/* Perform basic bounds check and don't erase this boot loader */
+//		if(eraseAddress <= (APP_END - SPM_PAGESIZE)) {
+//			erase_flash_page(eraseAddress);
+//			eraseAddress += SPM_PAGESIZE;
+//		}
+//		
+//		
+//	}
+	
+	while( (eraseAddress < (address + bufSize)) && (eraseAddress <= (APP_END - SPM_PAGESIZE)) ) {
 		/* Perform basic bounds check and don't erase this boot loader */
-		if(eraseAddress <= (APP_END - SPM_PAGESIZE)) {
-			erase_flash_page(eraseAddress);
-			eraseAddress += SPM_PAGESIZE;
-		}
-		
-		
+		erase_flash_page(eraseAddress);
+		eraseAddress += SPM_PAGESIZE;
 	}
+	
 	
 		
 	write_flash_page(p, address, bufSize);	
