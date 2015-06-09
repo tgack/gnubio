@@ -285,17 +285,15 @@ static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
 	bufSize = (((commandBuffer[1]) << 8) | (commandBuffer[2]));
 	p = &commandBuffer[10];
 	
-	/* Check page boundary and erase pages as the address comes around */
-//	if(address == eraseAddress) {
-//		/* Perform basic bounds check and don't erase this boot loader */
-//		if(eraseAddress <= (APP_END - SPM_PAGESIZE)) {
-//			erase_flash_page(eraseAddress);
-//			eraseAddress += SPM_PAGESIZE;
-//		}
-//		
-//		
-//	}
+	// Make sure the host application knows the processor is busy.
+	build_response_buffer(CMD_CHIP_ERASE, STATUS_CMD_FAILED);
+
+	if(0x00000000 == address) {
+		/* If the reset vector gets re-written, assume next reset is a boot app action. */
+		eeprom_write_byte(BOOT_MODE_ADDRESS, BOOT_MODE_APPLICATION);			
+	}
 	
+	/* Check page boundary and erase pages as the address comes around */
 	while( (eraseAddress < (address + bufSize)) && (eraseAddress <= (APP_END - SPM_PAGESIZE)) ) {
 		/* Perform basic bounds check and don't erase this boot loader */
 		erase_flash_page(eraseAddress);
@@ -329,13 +327,6 @@ static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
 	
 	/* Build up an OK response */
 	build_response_buffer(CMD_PROGRAM_FLASH_ISP, STATUS_CMD_OK);
-
-
-	if(0x00000000 == address) {
-		/* If the reset vector gets re-written, assume next reset is a boot app action. */
-		eeprom_write_byte(BOOT_MODE_ADDRESS, BOOT_MODE_APPLICATION);			
-	}
-
 
 
 	return true;
