@@ -38,6 +38,14 @@
 
 /* Private define ------------------------------------------------------------*/
 
+#define I2C2_SCL_D8_Pin GPIO_PIN_9
+#define I2C2_SCL_D8_GPIO_Port GPIOA
+#define I2C2_SDA_D2_Pin GPIO_PIN_10
+#define I2C2_SDA_D2_GPIO_Port GPIOA
+#define I2C1_SCL_D15_Pin GPIO_PIN_8
+#define I2C1_SCL_D15_GPIO_Port GPIOB
+#define I2C1_SDA_D14_Pin GPIO_PIN_9
+#define I2C1_SDA_D14_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

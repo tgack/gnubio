@@ -96,10 +96,10 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
   /* USER CODE END I2C1_MspInit 0 */
   
     /**I2C1 GPIO Configuration    
-    PB6     ------> I2C1_SCL
-    PB7     ------> I2C1_SDA 
+    PB8     ------> I2C1_SCL
+    PB9     ------> I2C1_SDA 
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
+    GPIO_InitStruct.Pin = I2C1_SCL_D15_Pin|I2C1_SDA_D14_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
@@ -122,7 +122,7 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
     PA9     ------> I2C2_SCL
     PA10     ------> I2C2_SDA 
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10;
+    GPIO_InitStruct.Pin = I2C2_SCL_D8_Pin|I2C2_SDA_D2_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
@@ -149,10 +149,10 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
     __I2C1_CLK_DISABLE();
   
     /**I2C1 GPIO Configuration    
-    PB6     ------> I2C1_SCL
-    PB7     ------> I2C1_SDA 
+    PB8     ------> I2C1_SCL
+    PB9     ------> I2C1_SDA 
     */
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_6|GPIO_PIN_7);
+    HAL_GPIO_DeInit(GPIOB, I2C1_SCL_D15_Pin|I2C1_SDA_D14_Pin);
 
   /* USER CODE BEGIN I2C1_MspDeInit 1 */
 
@@ -170,7 +170,7 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
     PA9     ------> I2C2_SCL
     PA10     ------> I2C2_SDA 
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_9|GPIO_PIN_10);
+    HAL_GPIO_DeInit(GPIOA, I2C2_SCL_D8_Pin|I2C2_SDA_D2_Pin);
 
   /* USER CODE BEGIN I2C2_MspDeInit 1 */
 
