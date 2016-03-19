@@ -1,6 +1,7 @@
 #MicroXplorer Configuration settings - do not modify
 File.Version=6
-I2C1.IPParameters=Timing
+I2C1.IPParameters=Timing,OwnAddress
+I2C1.OwnAddress=5
 I2C1.Timing=0x10808DD3
 I2C2.IPParameters=Timing
 I2C2.Timing=0x10808DD3
@@ -31,6 +32,8 @@ Mcu.UserConstants=
 Mcu.UserName=STM32F303RETx
 MxCube.Version=4.13.0
 MxDb.Version=DB.4.0.130
+NVIC.I2C1_ER_IRQn=true\:0\:0\:false
+NVIC.I2C1_EV_IRQn=true\:0\:0\:false
 NVIC.PriorityGroup=NVIC_PRIORITYGROUP_4
 NVIC.SysTick_IRQn=true\:0\:0\:false
 PA10.GPIOParameters=GPIO_Label

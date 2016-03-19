@@ -36,13 +36,34 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
-
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+#define I2C_BUFFER_SIZE	64
+
+#define MESSAGE_START	0x1B
+#define TOKEN			0x0E
+
+#define CMD_CHIP_ERASE	0x12
+
+#define STATUS_CMD_OK	0x00
+
+static volatile uint32_t i2cErrorCounter;
+static volatile uint32_t i2cReceiveFlag;
+static uint8_t i2cRxCharacter[I2C_BUFFER_SIZE];
+static uint8_t i2cTxCharacter[I2C_BUFFER_SIZE];
+static volatile uint16_t i2cRxLength;
+static volatile uint16_t i2cTxLength;
+
+static uint8_t st_sequence_number;
+static uint16_t st_message_size;
+
+static uint32_t eraseAddress;
+
 
 /* USER CODE END PV */
 
@@ -51,7 +72,12 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-
+static uint8_t calculateSTK500Checksum(uint8_t *buffer, uint16_t length);
+static void build_response_buffer(uint8_t responseCommand, uint8_t responseValue);
+static void buildMessageHeader(uint16_t length);
+static bool processRequest(void);
+static bool commandProcessor(uint8_t *commandBuffer, uint16_t size);
+static bool processEraseRequest(uint8_t *commandBuffer, uint16_t size);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -79,16 +105,39 @@ int main(void)
   MX_I2C2_Init();
 
   /* USER CODE BEGIN 2 */
-
+  i2cErrorCounter = 0;
+  i2cReceiveFlag = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  // --
+  // -- Start the I2C receive function.
+  // --
+  HAL_I2C_Slave_Receive_IT(&hi2c1, i2cRxCharacter, sizeof(i2cRxCharacter));
+
   while (1)
   {
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+	  if(i2cReceiveFlag)
+	  {
+		  if(true == processRequest())
+		  {
+			  HAL_I2C_Slave_Transmit_IT(&hi2c1, i2cTxCharacter, i2cTxLength);
+		  }
+
+
+		  //
+		  // Restart I2C Receiving
+		  // Clear the receive flag first
+		  //
+		  i2cReceiveFlag = 0;
+		  HAL_I2C_Slave_Receive_IT(&hi2c1, i2cRxCharacter, sizeof(i2cRxCharacter));
+
+	  }
 
   }
   /* USER CODE END 3 */
@@ -136,6 +185,172 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+/**
+ * Function: processRequest
+ *
+ * Input:
+ * 	 None
+ *
+ * Output:
+ * 	None
+ *
+ * Returns:
+ * 	true - Response is ready to send
+ * 	false - No response required
+ *
+ * Description:
+ * 	Verifies the checksum on the current request. If no errors
+ * 	are detected, save the sequence number, extract the data
+ * 	segment of the request, and pass the request to the command
+ * 	processor.
+ */
+static bool processRequest(void)
+{
+	uint8_t bufferChecksum;
+	bool responseFlag;
+
+
+
+	if(MESSAGE_START != i2cRxCharacter[0])
+	{
+		return false;
+	}
+
+	// --
+	// -- Calculate the checksum in the buffer. i2cRxLength is
+	// -- set by the i2c interrupt service routine
+	// --
+	bufferChecksum = calculateSTK500Checksum(i2cRxCharacter, i2cRxLength-1);
+
+	responseFlag = false;
+
+	if( (bufferChecksum == i2cRxCharacter[i2cRxLength-1]) && (TOKEN == i2cRxCharacter[4]))
+	{
+		st_sequence_number = i2cRxCharacter[1];
+		st_message_size = ((uint16_t)i2cRxCharacter[2] << 8) + (uint16_t)i2cRxCharacter[3];
+		responseFlag = commandProcessor(&i2cRxCharacter[5], st_message_size);
+	}
+
+	return responseFlag;
+}
+
+/**
+ * Function: commandProcessor
+ *
+ * Input:
+ * 	commandBuffer - Block containing request command
+ * 	size - Number of bytes int he request
+ *
+ * Output:
+ * 	None
+ *
+ * Returns:
+ * 	None
+ *
+ * Description:
+ * 	Routes requests to the appropriate command processing function
+ */
+static bool commandProcessor(uint8_t *commandBuffer, uint16_t size)
+{
+	bool responseFlag;
+	switch(commandBuffer[0])
+	{
+	case CMD_CHIP_ERASE:
+		responseFlag = processEraseRequest(commandBuffer, size);
+		break;
+	default:
+		responseFlag = false;
+		break;
+	}
+	return responseFlag;
+}
+
+
+static bool processEraseRequest(uint8_t *commandBuffer, uint16_t size)
+{
+	eraseAddress = 0;
+
+	build_response_buffer(CMD_CHIP_ERASE, STATUS_CMD_OK);
+
+	return true;
+}
+
+
+/**
+ * Function: calculateSTK500Checksum
+ *
+ * Input:
+ * 	buffer - Pointer to buffer containing source data
+ * 	length - Number of bytes in the source data buffer
+ *
+ * Output:
+ * 	None
+ *
+ * Returns:
+ * 	XOR checksum based on source buffer
+ */
+static uint8_t calculateSTK500Checksum(uint8_t *buffer, uint16_t length)
+{
+	uint16_t index;
+	uint8_t checksum;
+	checksum = buffer[0];
+	for(index=1; index<length; index++)
+	{
+		checksum ^= buffer[index];
+	}
+	return checksum;
+}
+
+/**
+ * Function: build_response_buffer
+ *
+ * Input:
+ * 	responseCommand: command response is generated for
+ * 	responseValue: Pass / Fail indicator for response
+ *
+ * Output:
+ * 	None
+ *
+ * Returns:
+ * 	none
+ *
+ * Description:
+ * 	This function simply builds an STK500 response packet.
+ * 	The response will be returned to the host on the next TWI read
+ * 	request.
+ */
+static void build_response_buffer(uint8_t responseCommand, uint8_t responseValue)
+{
+	buildMessageHeader(2);
+	i2cTxCharacter[5] = responseCommand;
+	i2cTxCharacter[6] = responseValue;
+	i2cTxCharacter[7] = calculateSTK500Checksum(i2cTxCharacter, 7);
+
+	i2cTxLength = 8;
+}
+
+static void buildMessageHeader(uint16_t length)
+{
+	i2cTxCharacter[0] = MESSAGE_START;
+	i2cTxCharacter[1] = st_sequence_number;
+	i2cTxCharacter[2] = (length >> 8);
+	i2cTxCharacter[3] = (length & 0x00FF);
+	i2cTxCharacter[4] = TOKEN;
+}
+
+void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	i2cReceiveFlag++;
+	i2cRxLength = (I2C_BUFFER_SIZE - hi2c->XferCount);
+
+}
+
+void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
+{
+	i2cErrorCounter++;
+}
+
 
 /* USER CODE END 4 */
 
