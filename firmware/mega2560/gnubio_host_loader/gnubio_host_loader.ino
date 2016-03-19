@@ -145,6 +145,8 @@ boolean resetProcess(unsigned char target);
  * Setup serial communcation.
  */
 void setup() {
+  
+
 
   //  pinMode(FLASHING_LED, OUTPUT);
   /* Set PORTG.0 and PORTG.1 direction to output */
@@ -179,6 +181,7 @@ void setup() {
   ledFlashPeriod = 250;
   ledState = 0;
   lineBuffer = "";
+  
 
 }
 
@@ -187,7 +190,7 @@ void setup() {
  * Main program loop
  */
 void loop() {
-
+   
 
   flashLED();
 
@@ -325,6 +328,8 @@ boolean processRequest() {
       rValue = false;
       //      eraseTargetFlag = false;
     }
+    
+    
   }
   else if(lineBuffer.startsWith("#") ) {
     /* This is a reset control request from the host application. */
@@ -335,6 +340,14 @@ boolean processRequest() {
 
     rValue = resetProcess(slaveID);
 
+  }
+  else if(lineBuffer.startsWith("*"))
+  {
+    dataBuffer[0] = 1;
+    dataBuffer[1] = 2;
+    Wire.beginTransmission(5);
+    Wire.write(dataBuffer, 2);
+    Wire.endTransmission(true);
   }
   else {
     if(lineBuffer.length() == 0) {
@@ -748,11 +761,12 @@ boolean writeSTK500V2Command(unsigned char device, unsigned char *buffer, unsign
   }
 
   cmd_buffer[j] = checkSum;
+  j++;
 
 
   Wire.beginTransmission(device);
 
-  Wire.write(cmd_buffer, j+1);
+  Wire.write(cmd_buffer, j);
 
   if(IIC_SUCCESS == Wire.endTransmission(true) ) {
     rValue = true;
