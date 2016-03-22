@@ -48,6 +48,8 @@
 void SysTick_Handler(void);
 void I2C1_EV_IRQHandler(void);
 void I2C1_ER_IRQHandler(void);
+void I2C2_EV_IRQHandler(void);
+void I2C2_ER_IRQHandler(void);
 
 #ifdef __cplusplus
 }

@@ -115,7 +115,7 @@ int main(void)
   // --
   // -- Start the I2C receive function.
   // --
-  HAL_I2C_Slave_Receive_IT(&hi2c1, i2cRxCharacter, sizeof(i2cRxCharacter));
+  HAL_I2C_Slave_Receive_IT(&hi2c2, i2cRxCharacter, sizeof(i2cRxCharacter));
 
   while (1)
   {
@@ -126,7 +126,7 @@ int main(void)
 	  {
 		  if(true == processRequest())
 		  {
-			  HAL_I2C_Slave_Transmit_IT(&hi2c1, i2cTxCharacter, i2cTxLength);
+			  HAL_I2C_Slave_Transmit_IT(&hi2c2, i2cTxCharacter, i2cTxLength);
 		  }
 
 
@@ -135,7 +135,7 @@ int main(void)
 		  // Clear the receive flag first
 		  //
 		  i2cReceiveFlag = 0;
-		  HAL_I2C_Slave_Receive_IT(&hi2c1, i2cRxCharacter, sizeof(i2cRxCharacter));
+		  HAL_I2C_Slave_Receive_IT(&hi2c2, i2cRxCharacter, sizeof(i2cRxCharacter));
 
 	  }
 
@@ -341,14 +341,22 @@ static void buildMessageHeader(uint16_t length)
 
 void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
-	i2cReceiveFlag++;
-	i2cRxLength = (I2C_BUFFER_SIZE - hi2c->XferCount);
+	if(hi2c2.Instance == hi2c->Instance)
+	{
+		// Servicing I2C2 peripheral interrupt
+		i2cReceiveFlag++;
+		i2cRxLength = (I2C_BUFFER_SIZE - hi2c->XferCount);
+	}
 
 }
 
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
 {
-	i2cErrorCounter++;
+
+	if(hi2c2.Instance == hi2c->Instance)
+	{
+		i2cErrorCounter++;
+	}
 }
 
 

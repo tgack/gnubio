@@ -70,7 +70,7 @@ void MX_I2C2_Init(void)
 
   hi2c2.Instance = I2C2;
   hi2c2.Init.Timing = 0x10808DD3;
-  hi2c2.Init.OwnAddress1 = 0;
+  hi2c2.Init.OwnAddress1 = 10;
   hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
   hi2c2.Init.OwnAddress2 = 0;
@@ -137,6 +137,12 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
 
     /* Peripheral clock enable */
     __I2C2_CLK_ENABLE();
+
+    /* Peripheral interrupt init*/
+    HAL_NVIC_SetPriority(I2C2_EV_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(I2C2_EV_IRQn);
+    HAL_NVIC_SetPriority(I2C2_ER_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(I2C2_ER_IRQn);
   /* USER CODE BEGIN I2C2_MspInit 1 */
 
   /* USER CODE END I2C2_MspInit 1 */
@@ -182,6 +188,11 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
     PA10     ------> I2C2_SDA 
     */
     HAL_GPIO_DeInit(GPIOA, I2C2_SCL_D8_Pin|I2C2_SDA_D2_Pin);
+
+    /* Peripheral interrupt Deinit*/
+    HAL_NVIC_DisableIRQ(I2C2_EV_IRQn);
+
+    HAL_NVIC_DisableIRQ(I2C2_ER_IRQn);
 
   /* USER CODE BEGIN I2C2_MspDeInit 1 */
 
