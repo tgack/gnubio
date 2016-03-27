@@ -37,20 +37,36 @@
 
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define I2C_BUFFER_SIZE	64
+#define APP_END 0x80000
+#define APP_START 0x10000
 
-#define MESSAGE_START	0x1B
-#define TOKEN			0x0E
+/* Block out application EEPROM space */
+#define BOOT_MODE_ADDRESS 		0x7F
+#define BOOT_MODE_APPLICATION	0xA5
+#define BOOT_MODE_STK500		0xFF
+#define BOOT_MODE_DEVADDRESS	(0x50 << 1)
 
-#define CMD_CHIP_ERASE	0x12
+#define I2C_BUFFER_SIZE			64
 
-#define STATUS_CMD_OK	0x00
+#define MESSAGE_START			0x1B
+#define TOKEN					0x0E
+
+#define CMD_LOAD_ADDRESS 		0x06
+#define CMD_CHIP_ERASE			0x12
+#define CMD_PROGRAM_FLASH_ISP 	0x13
+#define CMD_READ_FLASH_ISP 		0x14
+
+#define STATUS_CMD_OK			0x00
+#define STATUS_CMD_FAILED		0xC0
+
+#define SPM_PAGESIZE			2048
 
 static volatile uint32_t i2cErrorCounter;
 static volatile uint32_t i2cReceiveFlag;
@@ -63,7 +79,7 @@ static uint8_t st_sequence_number;
 static uint16_t st_message_size;
 
 static uint32_t eraseAddress;
-
+static uint32_t address;
 
 /* USER CODE END PV */
 
@@ -78,6 +94,9 @@ static void buildMessageHeader(uint16_t length);
 static bool processRequest(void);
 static bool commandProcessor(uint8_t *commandBuffer, uint16_t size);
 static bool processEraseRequest(uint8_t *commandBuffer, uint16_t size);
+static bool processLoadAddressRequest(uint8_t* commandBuffer, uint16_t size);
+static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size);
+static bool processReadFlashIsp(uint8_t* commandBuffer, uint16_t size);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -107,16 +126,21 @@ int main(void)
   /* USER CODE BEGIN 2 */
   i2cErrorCounter = 0;
   i2cReceiveFlag = 0;
-  /* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+
+//  HAL_I2C_Mem_Write(&hi2c1, 0xA0, 0, I2C_MEMADD_SIZE_8BIT, (uint8_t *)"boot\0", 5, 200);
+//  HAL_Delay(5);
+//  HAL_I2C_Mem_Read(&hi2c1, 0xA0, 0, I2C_MEMADD_SIZE_8BIT, i2cRxCharacter, 8, 200);
 
   // --
   // -- Start the I2C receive function.
   // --
   HAL_I2C_Slave_Receive_IT(&hi2c2, i2cRxCharacter, sizeof(i2cRxCharacter));
 
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
   while (1)
   {
   /* USER CODE END WHILE */
@@ -126,13 +150,14 @@ int main(void)
 	  {
 		  if(true == processRequest())
 		  {
-			  HAL_I2C_Slave_Transmit_IT(&hi2c2, i2cTxCharacter, i2cTxLength);
+			  /* Request involves data to be read by the host. */
+			  HAL_I2C_Slave_Transmit(&hi2c2, i2cTxCharacter, i2cTxLength, 200);
 		  }
 
 
 		  //
+		  // Clear the receive flag first, then ...
 		  // Restart I2C Receiving
-		  // Clear the receive flag first
 		  //
 		  i2cReceiveFlag = 0;
 		  HAL_I2C_Slave_Receive_IT(&hi2c2, i2cRxCharacter, sizeof(i2cRxCharacter));
@@ -259,11 +284,206 @@ static bool commandProcessor(uint8_t *commandBuffer, uint16_t size)
 	case CMD_CHIP_ERASE:
 		responseFlag = processEraseRequest(commandBuffer, size);
 		break;
+	case CMD_LOAD_ADDRESS:
+		responseFlag = processLoadAddressRequest(commandBuffer, size);
+		break;
+	case CMD_PROGRAM_FLASH_ISP:
+		responseFlag = processProgramFlashIsp(commandBuffer, size);
+		break;
+	case CMD_READ_FLASH_ISP:
+		responseFlag = processReadFlashIsp(commandBuffer, size);
+		break;
 	default:
 		responseFlag = false;
 		break;
 	}
 	return responseFlag;
+}
+
+
+/*
+ * Function: processReadFlashIsp
+ * Input:
+ *	commandBuffer - buffer containing command to process
+ *	size - number of bytes in the block of memory
+ * Output:
+ *	none
+ * Returns:
+ *	true - success
+ *	false - fail
+ * Description:
+ *	Builds a response packet that will be returned on the next TWI
+ *	read request.
+ */
+static bool processReadFlashIsp(uint8_t* commandBuffer, uint16_t size)
+{
+	bool rValue = false;
+	uint16_t index;
+	uint16_t bufSize;
+//	uint16_t temp;
+
+	bufSize = (((commandBuffer[1]) << 8) | (commandBuffer[2]));
+
+	if(bufSize <= 16) {
+
+		rValue = true;
+
+		for(index=0; index < bufSize; index++) {
+			memcpy(&i2cTxCharacter[7+index], (uint8_t *)address+index, 1);
+		}
+		address += bufSize;
+
+		buildMessageHeader(bufSize);
+
+
+
+		i2cTxCharacter[5] = CMD_READ_FLASH_ISP;
+		i2cTxCharacter[6] = STATUS_CMD_OK;
+
+		i2cTxCharacter[7 + bufSize] = STATUS_CMD_OK;
+		i2cTxCharacter[8 + bufSize] = calculateSTK500Checksum(i2cTxCharacter, 7 + bufSize);
+		i2cTxLength = 9 + bufSize;
+
+	}
+
+
+	return rValue;
+}
+
+/*
+ * Function: processProgramFlashIsp
+ * Input:
+ *	commandBuffer - Points to request commands
+ *	size - number of bytes in the command buffer
+ * Output:
+ *	none
+ * Returns:
+ *	true - function finished
+ *	false - always returns true
+ *
+ * Description:
+ *	This function writes a block of data to Flash memory. Since the
+ *	return flag is an indicator that the function finished, not
+ *	whether or not the flash write succeeded, the host application
+ *	needs to perform verification by reading back the contents of
+ *	flash.
+ */
+static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
+{
+	uint8_t write_buffer[16];
+	uint16_t write_buffer_index;
+	uint32_t app_write_address;
+	uint32_t flashEraseErr;
+	uint8_t *p;
+	uint16_t bufSize;
+	uint16_t index;
+	FLASH_EraseInitTypeDef flashEraseType;
+
+
+	bufSize = (((commandBuffer[1]) << 8) | (commandBuffer[2]));
+	p = &commandBuffer[10];
+
+
+	if(address >= APP_START)
+	{
+		// TODO: Write data to flash
+		if(0x00000000 == address) {
+			/* If the reset vector gets re-written, assume next reset is a boot app action. */
+			//eeprom_write_byte(BOOT_MODE_ADDRESS, BOOT_MODE_APPLICATION);
+			write_buffer[0] = BOOT_MODE_APPLICATION;
+			HAL_I2C_Mem_Write(&hi2c1, BOOT_MODE_DEVADDRESS, BOOT_MODE_ADDRESS,
+					I2C_MEMADD_SIZE_8BIT, (uint8_t *)write_buffer, 1, 200);
+		}
+
+		if(HAL_OK == HAL_FLASH_Unlock())
+		{
+
+			/* Check page boundary and erase pages as the address comes around */
+			while( (eraseAddress < (address + bufSize)) ) {
+
+				/* Perform basic bounds check and don't erase this boot loader */
+				flashEraseType.NbPages = 1;
+				flashEraseType.PageAddress = eraseAddress;
+				flashEraseType.TypeErase = FLASH_TYPEERASE_PAGES;
+
+				HAL_FLASH_Unlock();
+				HAL_FLASHEx_Erase(&flashEraseType, flashEraseErr);
+
+				eraseAddress += SPM_PAGESIZE;
+			}
+
+
+			// TODO: Write flash here.
+
+			HAL_FLASH_Lock();
+		}
+
+	}
+
+//
+////	write_flash_page(p, address, bufSize);
+//	write_buffer_index = 0;
+//	app_write_address = address;
+//	for(index=0; index < bufSize; index++) {
+//		write_buffer[write_buffer_index] = p[index];
+//		address++;
+//		write_buffer_index++;
+//
+//		if(0x00000000 == (address & 0x0000000F)) {
+//			write_flash_page(write_buffer, app_write_address, write_buffer_index);
+//			app_write_address = address;
+//			write_buffer_index = 0;
+//		}
+//
+//
+//
+//	}
+//
+//	if(write_buffer_index) {
+//		write_flash_page(write_buffer, app_write_address, write_buffer_index);
+//	}
+
+
+
+
+	// Request was received, so respond OK, let the verifier
+	// generate the error at the host level.
+	build_response_buffer(CMD_PROGRAM_FLASH_ISP, STATUS_CMD_OK);
+
+
+	return true;
+}
+
+
+/*
+ * Function: processLoadAddressRequest
+ * Input:
+ *	commandBuffer - points to the data segment of a received packet
+ *	size - Number of bytes in the data segment
+ * Output:
+ *	none
+ * Returns:
+ *	true = success
+ *	false - Address out of bounds.
+ */
+static bool processLoadAddressRequest(uint8_t* commandBuffer, uint16_t size)
+{
+	bool rValue;
+	rValue = false;
+
+	address = ((((uint32_t)commandBuffer[1]) << 24) | (((uint32_t)commandBuffer[2]) << 16) |
+		(((uint32_t)commandBuffer[3]) << 8) | ((uint32_t)commandBuffer[4])); // Convert the word address to byte address
+
+
+	if(address < (APP_END << 1)) {
+		build_response_buffer(CMD_LOAD_ADDRESS, STATUS_CMD_OK);
+		rValue= true;
+	} else {
+		build_response_buffer(CMD_LOAD_ADDRESS, STATUS_CMD_FAILED);
+	}
+
+
+	return rValue;
 }
 
 
