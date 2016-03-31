@@ -100,6 +100,11 @@ static bool processReadFlashIsp(uint8_t* commandBuffer, uint16_t size);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+typedef union _FLASH_WORD_
+{
+	uint32_t value;
+	uint8_t units[4];
+}FLASH_WORD;
 
 /* USER CODE END 0 */
 
@@ -107,7 +112,11 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+	uint32_t i, pageError;
+	uint32_t *flashAddress;
+	HAL_StatusTypeDef status;
+	FLASH_EraseInitTypeDef eraseInitStruct;
+	FLASH_WORD flashWord;
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -131,6 +140,36 @@ int main(void)
 //  HAL_I2C_Mem_Write(&hi2c1, 0xA0, 0, I2C_MEMADD_SIZE_8BIT, (uint8_t *)"boot\0", 5, 200);
 //  HAL_Delay(5);
 //  HAL_I2C_Mem_Read(&hi2c1, 0xA0, 0, I2C_MEMADD_SIZE_8BIT, i2cRxCharacter, 8, 200);
+
+
+  //
+  // Test Flash erase / write
+  //
+  flashAddress = (uint32_t*)APP_START;
+  HAL_FLASH_Unlock();
+  for(i=0; i<5000; i+=2)
+  {
+	  if(0 == (i^SPM_PAGESIZE) || (0 == i))
+	  {
+		  // erase the current flash page
+		  eraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
+		  eraseInitStruct.PageAddress = (uint32_t)flashAddress;
+		  eraseInitStruct.NbPages = 1;
+		  status = HAL_FLASHEx_Erase(&eraseInitStruct, &pageError);
+	  }
+
+	  flashWord.value = 0xFFFFFFFF;
+	  flashWord.units[0] = 0x78;
+	  flashWord.units[1] = 0x56;
+	  flashWord.units[2] = 0x34;
+	  flashWord.units[3] = 0x12;
+	  status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, (uint32_t)flashAddress, flashWord.value);
+	  flashAddress++;
+
+
+  }
+  HAL_FLASH_Lock();
+
 
   // --
   // -- Start the I2C receive function.
@@ -407,7 +446,7 @@ static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
 				flashEraseType.TypeErase = FLASH_TYPEERASE_PAGES;
 
 				HAL_FLASH_Unlock();
-				HAL_FLASHEx_Erase(&flashEraseType, flashEraseErr);
+				HAL_FLASHEx_Erase(&flashEraseType, &flashEraseErr);
 
 				eraseAddress += SPM_PAGESIZE;
 			}
