@@ -303,6 +303,9 @@ boolean processRequest() {
         flashAddressExtension = getAddressExtension(lineBuffer) >> 12;
         rValue = true;
         break;
+      case 4:
+        flashAddressExtension = getAddressExtension(lineBuffer);  
+        rValue = true;
       default:
         rValue = true;
         break;

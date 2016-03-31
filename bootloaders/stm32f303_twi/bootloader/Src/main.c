@@ -112,11 +112,11 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-	uint32_t i, pageError;
-	uint32_t *flashAddress;
-	HAL_StatusTypeDef status;
-	FLASH_EraseInitTypeDef eraseInitStruct;
-	FLASH_WORD flashWord;
+//	uint32_t i, pageError;
+//	uint32_t *flashAddress;
+//	HAL_StatusTypeDef status;
+//	FLASH_EraseInitTypeDef eraseInitStruct;
+//	FLASH_WORD flashWord;
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -145,30 +145,30 @@ int main(void)
   //
   // Test Flash erase / write
   //
-  flashAddress = (uint32_t*)APP_START;
-  HAL_FLASH_Unlock();
-  for(i=0; i<5000; i+=2)
-  {
-	  if(0 == (i^SPM_PAGESIZE) || (0 == i))
-	  {
-		  // erase the current flash page
-		  eraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
-		  eraseInitStruct.PageAddress = (uint32_t)flashAddress;
-		  eraseInitStruct.NbPages = 1;
-		  status = HAL_FLASHEx_Erase(&eraseInitStruct, &pageError);
-	  }
-
-	  flashWord.value = 0xFFFFFFFF;
-	  flashWord.units[0] = 0x78;
-	  flashWord.units[1] = 0x56;
-	  flashWord.units[2] = 0x34;
-	  flashWord.units[3] = 0x12;
-	  status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, (uint32_t)flashAddress, flashWord.value);
-	  flashAddress++;
-
-
-  }
-  HAL_FLASH_Lock();
+//  flashAddress = (uint32_t*)APP_START;
+//  HAL_FLASH_Unlock();
+//  for(i=0; i<5000; i+=2)
+//  {
+//	  if(0 == (i^SPM_PAGESIZE) || (0 == i))
+//	  {
+//		  // erase the current flash page
+//		  eraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
+//		  eraseInitStruct.PageAddress = (uint32_t)flashAddress;
+//		  eraseInitStruct.NbPages = 1;
+//		  status = HAL_FLASHEx_Erase(&eraseInitStruct, &pageError);
+//	  }
+//
+//	  flashWord.value = 0xFFFFFFFF;
+//	  flashWord.units[0] = 0x78;
+//	  flashWord.units[1] = 0x56;
+//	  flashWord.units[2] = 0x34;
+//	  flashWord.units[3] = 0x12;
+//	  status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, (uint32_t)flashAddress, flashWord.value);
+//	  flashAddress++;
+//
+//
+//  }
+//  HAL_FLASH_Lock();
 
 
   // --
