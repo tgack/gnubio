@@ -98,6 +98,11 @@ static bool processEraseRequest(uint8_t *commandBuffer, uint16_t size);
 static bool processLoadAddressRequest(uint8_t* commandBuffer, uint16_t size);
 static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size);
 static bool processReadFlashIsp(uint8_t* commandBuffer, uint16_t size);
+
+//void (*const jumpFunction)(void) = (void(*)(void)) (APP_START + 4ul);
+typedef  void (*pFunction)(void);
+pFunction jumpFunction;
+
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -113,11 +118,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-//	uint32_t i, pageError;
-//	uint32_t *flashAddress;
-//	HAL_StatusTypeDef status;
-//	FLASH_EraseInitTypeDef eraseInitStruct;
-//	FLASH_WORD flashWord;
+	uint8_t bootValue;
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -137,39 +138,22 @@ int main(void)
   i2cErrorCounter = 0;
   i2cReceiveFlag = 0;
 
+  // --
+  // --
+  // --
+  if(HAL_OK == HAL_I2C_Mem_Read(&hi2c1, 0xA0, BOOT_MODE_ADDRESS, I2C_MEMADD_SIZE_8BIT, &bootValue, 1, 200))
+  {
+	  if(BOOT_MODE_APPLICATION == bootValue)
+	  {
+		  SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
+		  HAL_I2C_MspDeInit(&hi2c1);
+		  HAL_I2C_MspDeInit(&hi2c2);
+		  __set_MSP(*(__IO uint32_t*)APP_START);
+		  jumpFunction = (pFunction)((uint32_t*)APP_START)[1];
+		  jumpFunction();
 
-//  HAL_I2C_Mem_Write(&hi2c1, 0xA0, 0, I2C_MEMADD_SIZE_8BIT, (uint8_t *)"boot\0", 5, 200);
-//  HAL_Delay(5);
-//  HAL_I2C_Mem_Read(&hi2c1, 0xA0, 0, I2C_MEMADD_SIZE_8BIT, i2cRxCharacter, 8, 200);
-
-
-  //
-  // Test Flash erase / write
-  //
-//  flashAddress = (uint32_t*)APP_START;
-//  HAL_FLASH_Unlock();
-//  for(i=0; i<5000; i+=2)
-//  {
-//	  if(0 == (i^SPM_PAGESIZE) || (0 == i))
-//	  {
-//		  // erase the current flash page
-//		  eraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
-//		  eraseInitStruct.PageAddress = (uint32_t)flashAddress;
-//		  eraseInitStruct.NbPages = 1;
-//		  status = HAL_FLASHEx_Erase(&eraseInitStruct, &pageError);
-//	  }
-//
-//	  flashWord.value = 0xFFFFFFFF;
-//	  flashWord.units[0] = 0x78;
-//	  flashWord.units[1] = 0x56;
-//	  flashWord.units[2] = 0x34;
-//	  flashWord.units[3] = 0x12;
-//	  status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, (uint32_t)flashAddress, flashWord.value);
-//	  flashAddress++;
-//
-//
-//  }
-//  HAL_FLASH_Lock();
+	  }
+  }
 
 
   // --
@@ -192,6 +176,8 @@ int main(void)
 		  {
 			  /* Request involves data to be read by the host. */
 			  HAL_I2C_Slave_Transmit(&hi2c2, i2cTxCharacter, i2cTxLength, 200);
+
+
 		  }
 
 
@@ -431,7 +417,7 @@ static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
 		if(APP_START == address) {
 			/* If the reset vector gets re-written, assume next reset is a boot app action. */
 			// TODO: Put system into application mode.
-			write_buffer[0] = BOOT_MODE_LOAD;
+			write_buffer[0] = BOOT_MODE_APPLICATION;
 			HAL_I2C_Mem_Write(&hi2c1, BOOT_MODE_DEVADDRESS, BOOT_MODE_ADDRESS,
 					I2C_MEMADD_SIZE_8BIT, (uint8_t *)write_buffer, 1, 200);
 		}

@@ -46,7 +46,7 @@
 /* Exported functions ------------------------------------------------------- */
 
 void SysTick_Handler(void);
-void TIM1_BRK_TIM15_IRQHandler(void);
+void TIM1_UP_TIM16_IRQHandler(void);
 void I2C2_EV_IRQHandler(void);
 void I2C2_ER_IRQHandler(void);
 
