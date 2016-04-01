@@ -57,6 +57,7 @@ void MX_FREERTOS_Init(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+const char VERSION[] = "1.0";
 
 /* USER CODE END 0 */
 

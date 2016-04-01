@@ -44,14 +44,15 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define APP_END 0x80000
-#define APP_START 0x10000
+#define APP_END 0x08080000
+#define APP_START 0x08010000
 
 /* Block out application EEPROM space */
 #define BOOT_MODE_ADDRESS 		0x7F
 #define BOOT_MODE_APPLICATION	0xA5
 #define BOOT_MODE_STK500		0xFF
 #define BOOT_MODE_DEVADDRESS	(0x50 << 1)
+#define BOOT_MODE_LOAD			0xFF
 
 #define I2C_BUFFER_SIZE			64
 
@@ -410,13 +411,14 @@ static bool processReadFlashIsp(uint8_t* commandBuffer, uint16_t size)
 static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
 {
 	uint8_t write_buffer[16];
-	uint16_t write_buffer_index;
-	uint32_t app_write_address;
 	uint32_t flashEraseErr;
 	uint8_t *p;
 	uint16_t bufSize;
-	uint16_t index;
+	uint16_t index, wordIndex;
 	FLASH_EraseInitTypeDef flashEraseType;
+	FLASH_WORD flashWord;
+	uint32_t *flashAddress;
+	HAL_StatusTypeDef status;
 
 
 	bufSize = (((commandBuffer[1]) << 8) | (commandBuffer[2]));
@@ -426,10 +428,10 @@ static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
 	if(address >= APP_START)
 	{
 		// TODO: Write data to flash
-		if(0x00000000 == address) {
+		if(APP_START == address) {
 			/* If the reset vector gets re-written, assume next reset is a boot app action. */
-			//eeprom_write_byte(BOOT_MODE_ADDRESS, BOOT_MODE_APPLICATION);
-			write_buffer[0] = BOOT_MODE_APPLICATION;
+			// TODO: Put system into application mode.
+			write_buffer[0] = BOOT_MODE_LOAD;
 			HAL_I2C_Mem_Write(&hi2c1, BOOT_MODE_DEVADDRESS, BOOT_MODE_ADDRESS,
 					I2C_MEMADD_SIZE_8BIT, (uint8_t *)write_buffer, 1, 200);
 		}
@@ -453,36 +455,46 @@ static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
 
 
 			// TODO: Write flash here.
+			flashWord.value = 0xFFFFFFFF;
+			flashAddress = (uint32_t*)address;
+			wordIndex=0;
+			for(index=0; index < bufSize; index++)
+			{
+				flashWord.units[wordIndex] = p[index];
+				wordIndex++;
+
+				if(4 == wordIndex)
+				{
+					wordIndex=0;
+					status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, (uint32_t)flashAddress, flashWord.value);
+
+					if(HAL_OK != status)
+					{
+						break;
+					}
+					flashAddress++;
+				}
+
+			}
+
+			if(wordIndex)
+			{
+				status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, (uint32_t)flashAddress, flashWord.value);
+				flashAddress++;
+				wordIndex=0;
+			}
+
+			address = (uint32_t)flashAddress;
 
 			HAL_FLASH_Lock();
 		}
 
+
+
+
+
+
 	}
-
-//
-////	write_flash_page(p, address, bufSize);
-//	write_buffer_index = 0;
-//	app_write_address = address;
-//	for(index=0; index < bufSize; index++) {
-//		write_buffer[write_buffer_index] = p[index];
-//		address++;
-//		write_buffer_index++;
-//
-//		if(0x00000000 == (address & 0x0000000F)) {
-//			write_flash_page(write_buffer, app_write_address, write_buffer_index);
-//			app_write_address = address;
-//			write_buffer_index = 0;
-//		}
-//
-//
-//
-//	}
-//
-//	if(write_buffer_index) {
-//		write_flash_page(write_buffer, app_write_address, write_buffer_index);
-//	}
-
-
 
 
 	// Request was received, so respond OK, let the verifier
@@ -528,7 +540,7 @@ static bool processLoadAddressRequest(uint8_t* commandBuffer, uint16_t size)
 
 static bool processEraseRequest(uint8_t *commandBuffer, uint16_t size)
 {
-	eraseAddress = 0;
+	eraseAddress = APP_START;
 
 	build_response_buffer(CMD_CHIP_ERASE, STATUS_CMD_OK);
 

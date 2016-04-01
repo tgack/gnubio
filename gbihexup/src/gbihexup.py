@@ -63,6 +63,7 @@ def build_cli_arguments():
     parser.add_argument("-b", "--baud", type=int, default=115200, help="serial port communication speed")
     parser.add_argument("-f", "--file", default="a.hex", help="firmware image file name")
     parser.add_argument("-t", "--target", type=int, default=1, help="target address")
+    parser.add_argument("-u", "--uc", type=int, default=0, help="0=Atmel, 1=STM32")
     parser.add_argument("-v", "--verbose", action="store_true", help="print extra information")
 
     return(parser)
@@ -102,6 +103,8 @@ if __name__ == "__main__":
     args = cli_parser.parse_args()
     
     verboseOutput = args.verbose
+	
+    ucType = args.uc
     
 
     if args.scan:
@@ -150,43 +153,69 @@ if __name__ == "__main__":
             exitCode = ERROR_CODE.SUCCESS # Hope for the best
             
             # Transmit the firmware image
-            for each_line in content:
-                if lineCount == 0:
+            if ucType==0:
+                for each_line in content:
+                    if lineCount == 0:
+                        '''
+                            Save the first line in the file until the end. That way, the boot loader
+                            will not lauch the application if something goes wrong during normal programming
+                        '''
+                        first_line = each_line
+						
+                    lineCount = lineCount + 1
+					
                     '''
-                        Save the first line in the file until the end. That way, the boot loader
-                        will not lauch the application if something goes wrong during normal programming
+                        Don't write the first record until the rest of the application
+                        is written
                     '''
-                    first_line = each_line
-                    
-                lineCount = lineCount + 1
-                
-                '''
-                    Don't write the first record until the rest of the application
-                    is written
-                '''
-                if lineCount > 1:
+                    if lineCount > 1:
+                        print_extra_output(verboseOutput, "Line {0}: {1}".format(lineCount, each_line.strip(' \t\n\r')))
+
+                        # ignore any zero length lines.
+                        request = each_line.strip(' \t\n\r')
+                        if len(request) > 0:
+                            result = hostAction.send_image_line(each_line)
+
+                        if False == result:
+                            exitCode = ERROR_CODE.INVALID_PARAMETER
+                            break;
+            else:
+                for each_line in content:
+						
+                    lineCount = lineCount + 1
+					
+                    '''
+                        Don't write the first record until the rest of the application
+                        is written
+                    '''
                     print_extra_output(verboseOutput, "Line {0}: {1}".format(lineCount, each_line.strip(' \t\n\r')))
-                    
                     # ignore any zero length lines.
                     request = each_line.strip(' \t\n\r')
+
                     if len(request) > 0:
                         result = hostAction.send_image_line(each_line)
-                    
+
                     if False == result:
                         exitCode = ERROR_CODE.INVALID_PARAMETER
                         break;
-            
-            
-            if exitCode == ERROR_CODE.SUCCESS:
+			
+							
+							
+            if 0 == ucType:				
                 '''
-                    The rest of the program has been successfully written.
-                    Write the first record into the IVT. This will allow
-                    the boot loader to launch the application on next reset
-                '''
-                print_extra_output(verboseOutput, "Line 1: {0}".format(first_line.strip(' \t\n\r')))
-                request = first_line.strip(' \t\n\r')
-                if len(request) > 0:
-                    result = hostAction.send_image_line(first_line)
+				    This is an Atmel type, send the first line of the hex image now
+					if the rest of the image was succesfully loaded
+				'''
+                if exitCode == ERROR_CODE.SUCCESS:
+                    '''
+                        The rest of the program has been successfully written.
+                        Write the first record into the IVT. This will allow
+                        the boot loader to launch the application on next reset
+                    '''
+                    print_extra_output(verboseOutput, "Line 1: {0}".format(first_line.strip(' \t\n\r')))
+                    request = first_line.strip(' \t\n\r')
+                    if len(request) > 0:
+                        result = hostAction.send_image_line(first_line)
                     
             
             if False == result:
