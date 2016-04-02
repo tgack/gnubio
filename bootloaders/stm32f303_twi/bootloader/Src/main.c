@@ -101,7 +101,7 @@ static bool processReadFlashIsp(uint8_t* commandBuffer, uint16_t size);
 
 //void (*const jumpFunction)(void) = (void(*)(void)) (APP_START + 4ul);
 typedef  void (*pFunction)(void);
-pFunction jumpFunction;
+
 
 /* USER CODE END PFP */
 
@@ -119,6 +119,7 @@ int main(void)
 
   /* USER CODE BEGIN 1 */
 	uint8_t bootValue;
+	pFunction jumpFunction;
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -145,10 +146,23 @@ int main(void)
   {
 	  if(BOOT_MODE_APPLICATION == bootValue)
 	  {
+		  // Disable the system tick timer so that there's no
+		  // harm done if the application doesn't initialize an ISR
+		  // for sys tick
 		  SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
+
+		  // Disable the I2C peripherals
 		  HAL_I2C_MspDeInit(&hi2c1);
 		  HAL_I2C_MspDeInit(&hi2c2);
+
+		  // Reset the stack pointer
 		  __set_MSP(*(__IO uint32_t*)APP_START);
+
+		  // Jump to application space. The following two lines
+		  // recover the applications entry point address and calls
+		  // into the application. The application will generally
+		  // reset the stack pointer so the following function
+		  // should never return.
 		  jumpFunction = (pFunction)((uint32_t*)APP_START)[1];
 		  jumpFunction();
 

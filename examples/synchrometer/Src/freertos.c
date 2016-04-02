@@ -37,11 +37,13 @@
 #include "cmsis_os.h"
 
 /* USER CODE BEGIN Includes */     
+#include "gpio.h"
 
 /* USER CODE END Includes */
 
 /* Variables -----------------------------------------------------------------*/
 osThreadId defaultTaskHandle;
+osThreadId ledTaskHandle;
 
 /* USER CODE BEGIN Variables */
 
@@ -49,6 +51,7 @@ osThreadId defaultTaskHandle;
 
 /* Function prototypes -------------------------------------------------------*/
 void StartDefaultTask(void const * argument);
+void ld2FlashTask(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -82,6 +85,10 @@ void MX_FREERTOS_Init(void) {
   osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
+  /* definition and creation of ledTask */
+  osThreadDef(ledTask, ld2FlashTask, osPriorityIdle, 0, 256);
+  ledTaskHandle = osThreadCreate(osThread(ledTask), NULL);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -102,6 +109,30 @@ void StartDefaultTask(void const * argument)
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */
+}
+
+/* ld2FlashTask function */
+void ld2FlashTask(void const * argument)
+{
+  /* USER CODE BEGIN ld2FlashTask */
+	uint8_t flashFlag;
+	GPIO_PinState outputState;
+	flashFlag = 0;
+  /* Infinite loop */
+  for(;;)
+  {
+	  // Delay 250mS
+    osDelay(250);
+
+    // Toggle LED flag and set output state
+    flashFlag = 1 - flashFlag;
+    outputState = (flashFlag==0) ? GPIO_PIN_RESET : GPIO_PIN_SET;
+
+    // Output Logic state
+    HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, outputState);
+
+  }
+  /* USER CODE END ld2FlashTask */
 }
 
 /* USER CODE BEGIN Application */

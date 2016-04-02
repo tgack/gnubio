@@ -38,6 +38,8 @@
 
 /* Private define ------------------------------------------------------------*/
 
+#define D4_Pin GPIO_PIN_5
+#define D4_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
