@@ -1,0 +1,34 @@
+GNUBio STM32 Bootloader programming
+
+Toolchain:
+	gcc-arm-none-eabi-xxx - Version 4.5.3
+	
+EEPROM:
+
+The key for enableing and disabing the STM32 bootloader is stored at offset 0x7F in external EEPROM.
+
+Key: 0xA5 = Launch Applicatoin
+Key: Anything other than 0xA5 ... run the boot loader.
+
+
+Target Processor:
+	STM32F303RETx
+
+Bootloader Firmware Image Name:
+	bootloader.elf
+
+Bootloader Flash Address Space (word address):
+	0x00000000 - 0x0000FFFF
+	
+
+Uploading a new application using the boot loader:
+	Pre-requisite: The host micro-controller depends on the Arduino boot loader: 
+		arduino/hardware/arduino/bootloaders/stk500v2/stk500boot_v2_mega2560.hex
+		The host micro-controller must be programmed prior to using these GNUBio TWI bootloaders.
+	1. Enable the boot loader
+	2. Load a host firmware loader on the GBUBio master micr-controller
+		a. An example of an Arduino host program is provided: gnubio_host_loader.ino
+		b. An intel hex image of the host program is provided: gnubio_host_loader.cpp.hex
+		c. An example script file that utilizes avrdude, a serial port, and the intel hex file image is provided: load_host_firmware.sh
+	3. Upload the firmware image (intel hex file format) using the gbihexup utility
+		Ex. python gbihexup --baud=115200 --port=/dev/ttyUSB0 --file=slave_one_app.hex --target=2 -v
