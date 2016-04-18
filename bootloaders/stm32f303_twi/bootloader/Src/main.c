@@ -45,7 +45,7 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 #define APP_END 0x08080000
-#define APP_START 0x08010000
+#define AP_START_SECTOR 0x08010000
 
 /* Block out application EEPROM space */
 #define BOOT_MODE_ADDRESS 		0x7F
@@ -156,14 +156,15 @@ int main(void)
 		  HAL_I2C_MspDeInit(&hi2c2);
 
 		  // Reset the stack pointer
-		  __set_MSP(*(__IO uint32_t*)APP_START);
+		  __set_MSP(*(__IO uint32_t*)AP_START_SECTOR);
+
 
 		  // Jump to application space. The following two lines
 		  // recover the applications entry point address and calls
 		  // into the application. The application will generally
 		  // reset the stack pointer so the following function
 		  // should never return.
-		  jumpFunction = (pFunction)((uint32_t*)APP_START)[1];
+		  jumpFunction = (pFunction)((uint32_t*)AP_START_SECTOR)[1];
 		  jumpFunction();
 
 	  }
@@ -425,10 +426,10 @@ static bool processProgramFlashIsp(uint8_t* commandBuffer, uint16_t size)
 	p = &commandBuffer[10];
 
 
-	if(address >= APP_START)
+	if(address >= AP_START_SECTOR)
 	{
 		// TODO: Write data to flash
-		if(APP_START == address) {
+		if(AP_START_SECTOR == address) {
 			/* If the reset vector gets re-written, assume next reset is a boot app action. */
 			// TODO: Put system into application mode.
 			write_buffer[0] = BOOT_MODE_APPLICATION;
@@ -540,7 +541,7 @@ static bool processLoadAddressRequest(uint8_t* commandBuffer, uint16_t size)
 
 static bool processEraseRequest(uint8_t *commandBuffer, uint16_t size)
 {
-	eraseAddress = APP_START;
+	eraseAddress = AP_START_SECTOR;
 
 	build_response_buffer(CMD_CHIP_ERASE, STATUS_CMD_OK);
 

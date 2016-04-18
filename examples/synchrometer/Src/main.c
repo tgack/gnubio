@@ -43,6 +43,9 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+#define AP_START_SECTOR 0x08010000
+#define NVIC_VectTab_FLASH      (0x00000000)
+
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE END PV */
@@ -65,6 +68,9 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
+
+	// Relocate the ISR.
+	SCB->VTOR = NVIC_VectTab_FLASH | AP_START_SECTOR;
 
   /* USER CODE END 1 */
 
