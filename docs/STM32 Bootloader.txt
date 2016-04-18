@@ -11,9 +11,15 @@ Key: 0xA5 = Launch Applicatoin
 Key: Anything other than 0xA5 ... run the boot loader.
 
 
+
 Target Processor:
 	STM32F303RETx
 
+Bootload Physical Layer:
+   Communication Type: I2C Slave
+   Communication Address: 5
+
+	
 Bootloader Firmware Image Name:
 	bootloader.elf
 
