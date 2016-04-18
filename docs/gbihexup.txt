@@ -11,6 +11,7 @@ gpihexup - Python CLI for uploading firmware images.
                 -b BAUD, --baud BAUD  serial port communication speed
                 -f FILE, --file FILE  firmware image file name
                 -t TARGET, --target TARGET
+				-u TYPE, --uc TYPE    TYPE: 0 = Atmel, 1=STM32
                 -v, --verbose         print extra information
  
          Example:
